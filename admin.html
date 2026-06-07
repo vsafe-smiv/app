@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#061f35" />
+    <title>V-SAFE | ER Psychiatric Monitoring Center</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="stylesheet" href="./styles.css?v=13" />
+  </head>
+  <body class="admin-body">
+    <svg class="icon-sprite" aria-hidden="true">
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+      <symbol id="i-dashboard" viewBox="0 0 24 24"><path d="M4 13h7V4H4v9zM13 20h7V4h-7v16zM4 20h7v-5H4v5z"/></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+      <symbol id="i-patient" viewBox="0 0 24 24"><path d="M12 3v18M5 10h14"/><rect x="4" y="4" width="16" height="16" rx="4"/></symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></symbol>
+      <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2.1z"/></symbol>
+    </svg>
+    <section id="adminLogin" class="login-screen">
+      <form id="loginForm" class="login-card">
+        <img src="./icon%20app.png" alt="V-SAFE" />
+        <p class="eyebrow">ER Psychiatric Monitoring Center</p>
+        <h1>V-SAFE Admin</h1>
+        <label>User
+          <input name="user" autocomplete="username" required />
+        </label>
+        <label>รหัสผ่าน
+          <input name="password" type="password" autocomplete="current-password" required />
+        </label>
+        <button class="primary-btn wide" type="submit">เข้าสู่ระบบ</button>
+        <small>บัญชีทดสอบ: 14171 / 14171</small>
+      </form>
+    </section>
+
+    <div id="adminApp" class="admin-layout hidden">
+      <aside class="admin-sidebar">
+        <div class="sidebar-head">
+          <div class="brand-lockup compact">
+            <img src="./icon%20app.png" alt="V-SAFE" class="brand-mark" />
+            <div class="sidebar-brand-text">
+              <h1>V-SAFE</h1>
+              <p>ER Monitor</p>
+            </div>
+          </div>
+          <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="ซ่อน/แสดงเมนู"><svg><use href="#i-menu"></use></svg></button>
+        </div>
+        <nav class="side-nav">
+          <button class="active" data-admin-view="dashboard"><svg><use href="#i-dashboard"></use></svg><span>Dashboard</span></button>
+          <button data-admin-view="caseManagers"><svg><use href="#i-users"></use></svg><span>Case Manager</span></button>
+          <button data-admin-view="patients"><svg><use href="#i-patient"></use></svg><span>ผู้ป่วย</span></button>
+          <button data-admin-view="alerts"><svg><use href="#i-bell"></use></svg><span>แจ้งเตือน</span></button>
+        </nav>
+        <a class="ghost-link" href="./index.html">เปิดแอปผู้ดูแล</a>
+      </aside>
+
+      <main class="admin-main">
+        <header class="admin-topbar">
+          <div>
+            <p class="eyebrow">งานอุบัติเหตุฉุกเฉินและคัดกรอง</p>
+            <h2>ER Psychiatric Monitoring Center</h2>
+            <span class="topbar-subtitle">Area-based Psychiatric Emergency Linkage System</span>
+          </div>
+          <div class="clock-card">
+            <span id="thaiDate">--</span>
+            <strong id="thaiTime">--:--:--</strong>
+          </div>
+        </header>
+
+        <section id="admin-view-dashboard" class="admin-view active">
+          <div class="monitor-board">
+            <header class="monitor-hero">
+              <div class="monitor-brand">
+                <img src="./icon%20app.png" alt="V-SAFE" />
+                <div>
+                  <strong>V-SAFE</strong>
+                  <span>Violence-Screening Alert for Family Engagement</span>
+                </div>
+              </div>
+              <div class="monitor-title">
+                <h2>ระบบติดตามและเฝ้าระวังความเสี่ยงผู้ป่วยจิตเวช (V-SAFE)</h2>
+                <p>ศูนย์ Monitor ER Psychiatric Monitoring Center</p>
+                <span>โรงพยาบาลจิตเวชนครสวรรค์ราชนครินทร์</span>
+              </div>
+              <img class="monitor-logo" src="./nph%20logo.png" alt="โรงพยาบาลจิตเวชนครสวรรค์ราชนครินทร์" />
+            </header>
+
+            <div class="monitor-meta">
+              <div><span>เวลา</span><strong id="dashTime">--:--:--</strong></div>
+              <div><span>วันที่</span><strong id="dashDate">--</strong></div>
+              <div><span>เวร</span><strong id="dashWeekday">--</strong></div>
+              <div class="monitor-unit"><span>ศูนย์ติดตามผู้ป่วย SMI-V</span><strong>อัปเดตล่าสุด <b id="dashUpdated">--:--</b></strong></div>
+            </div>
+
+            <section class="monitor-section">
+              <div class="monitor-section-head">
+                <h3>ภาพรวมสถานการณ์</h3>
+              </div>
+              <div id="overviewCards" class="overview-grid monitor-overview"></div>
+            </section>
+
+            <section class="monitor-top-grid">
+              <article class="monitor-card trend-card">
+                <div class="monitor-card-head">
+                  <h3>แนวโน้มจำนวนผู้ป่วยแยกตามระดับความเสี่ยง</h3>
+                  <span>7 วันล่าสุด</span>
+                </div>
+                <canvas id="trendCanvas" width="900" height="320"></canvas>
+              </article>
+
+              <article class="monitor-card">
+                <div class="monitor-card-head">
+                  <h3>การแจ้งเตือนล่าสุด</h3>
+                  <button class="monitor-link" data-admin-view="alerts" type="button">ดูทั้งหมด</button>
+                </div>
+                <div id="dashboardAlertFeed" class="dashboard-alert-feed"></div>
+              </article>
+            </section>
+
+            <article class="monitor-card priority-monitor-card">
+              <div class="table-toolbar monitor-table-toolbar">
+                <div>
+                  <h3>รายชื่อผู้ป่วยที่ต้องเฝ้าระวัง (Priority List)</h3>
+                </div>
+                <div class="filters">
+                  <button class="filter-btn active" data-zone="ALL">ทั้งหมด</button>
+                  <button class="filter-btn red" data-zone="RED">RED ZONE</button>
+                  <button class="filter-btn yellow" data-zone="YELLOW">YELLOW ZONE</button>
+                  <button class="filter-btn green" data-zone="GREEN">GREEN ZONE</button>
+                  <input id="prioritySearch" placeholder="ค้นหา HN / Dx / พื้นที่" />
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="priority-table">
+                  <thead>
+                    <tr>
+                      <th>ลำดับ</th>
+                      <th>ระดับ</th>
+                      <th>HN</th>
+                      <th>Dx</th>
+                      <th>คะแนน</th>
+                      <th>พื้นที่</th>
+                      <th>อัพเดทล่าสุด</th>
+                      <th>สถานะ</th>
+                      <th>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="priorityRows"></tbody>
+                </table>
+              </div>
+            </article>
+
+            <section class="monitor-bottom-grid">
+              <article class="monitor-card monitor-map-card">
+                <div class="monitor-card-head">
+                  <h3>แผนที่ผู้ป่วยแยกตามระดับความเสี่ยง</h3>
+                  <span>OpenStreetMap + พิกัดผู้ป่วย</span>
+                </div>
+                <div id="riskMap" class="risk-map real-risk-map" aria-label="แผนที่จริงจังหวัดนครสวรรค์"></div>
+                <div class="map-legend">
+                  <span><i class="red"></i>RED ZONE</span>
+                  <span><i class="yellow"></i>YELLOW ZONE</span>
+                  <span><i class="green"></i>GREEN ZONE</span>
+                </div>
+              </article>
+
+              <div class="monitor-side-stack">
+                <article class="monitor-card">
+                  <div class="monitor-card-head">
+                    <h3>ช่องทางการติดต่อเร่งด่วน</h3>
+                  </div>
+                  <div id="dashboardContacts" class="dashboard-contact-grid"></div>
+                </article>
+                <article class="monitor-card split-card">
+                  <div>
+                    <div class="monitor-card-head">
+                      <h3>สถานะทีมปฏิบัติการ</h3>
+                    </div>
+                    <div id="dashboardOps" class="ops-list"></div>
+                  </div>
+                  <div>
+                    <div class="monitor-card-head">
+                      <h3>การรับมือวันนี้</h3>
+                    </div>
+                    <div id="dashboardDonut" class="response-donut"></div>
+                  </div>
+                </article>
+              </div>
+            </section>
+
+            <section class="monitor-bottom-grid slim">
+              <article class="monitor-card">
+                <div class="monitor-card-head">
+                  <h3>การช่วยเหลือล่าสุด</h3>
+                </div>
+                <div id="dashboardRescueLog" class="rescue-log"></div>
+              </article>
+              <article class="monitor-card">
+                <div class="monitor-card-head">
+                  <h3>การรักษาหน้าที่ศูนย์ Monitor ER Psychiatric</h3>
+                </div>
+                <div class="monitor-action-grid">
+                  <div>ติดตามและเฝ้าระวังแบบ Real-time</div>
+                  <div>รับสัญญาณแจ้งเตือนสถานการณ์เร่งด่วน</div>
+                  <div>ประสานทีมเครือข่ายเพื่อการช่วยเหลือ</div>
+                  <div>บันทึกและรายงานผลการดำเนินงาน</div>
+                </div>
+              </article>
+            </section>
+          </div>
+        </section>
+
+        <section id="admin-view-caseManagers" class="admin-view">
+          <article class="admin-card">
+            <div class="admin-section-head">
+              <div>
+                <p class="eyebrow">Area Team</p>
+                <h3>Case manager</h3>
+                <span>รายชื่อเจ้าหน้าที่ประจำพื้นที่และข้อมูลติดต่อ</span>
+              </div>
+              <button id="openCaseManagerForm" class="primary-btn" type="button">ลงทะเบียน Case manager</button>
+            </div>
+            <div class="table-wrap">
+              <table class="admin-data-table">
+                <thead>
+                  <tr>
+                    <th>ชื่อ-สกุล</th>
+                    <th>ตำแหน่ง</th>
+                    <th>สถานปฏิบัติงาน</th>
+                    <th>พื้นที่รับผิดชอบ</th>
+                    <th>โทรศัพท์</th>
+                    <th>จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="caseManagerRows"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="caseManagerFormCard" class="admin-card admin-form-card hidden">
+            <div class="admin-section-head compact">
+              <div>
+                <p class="eyebrow">Register</p>
+                <h3 id="caseManagerFormTitle">ลงทะเบียน Case manager</h3>
+              </div>
+              <button class="secondary-btn" id="cancelCaseManagerForm" type="button">ปิดฟอร์ม</button>
+            </div>
+            <form id="caseManagerForm" class="stack-form">
+              <input name="id" type="hidden" />
+              <div class="field-grid two">
+                <label>คำนำหน้า
+                  <select name="prefix" required>
+                    <option>นาย</option>
+                    <option>นาง</option>
+                    <option>นางสาว</option>
+                    <option>อื่นๆ</option>
+                  </select>
+                </label>
+                <label>ตำแหน่ง
+                  <input name="position" placeholder="พยาบาลวิชาชีพ" required />
+                </label>
+              </div>
+              <label>ชื่อ-สกุล
+                <input name="fullName" required />
+              </label>
+              <label>สถานปฏิบัติงาน
+                <input name="workplace" required />
+              </label>
+              <div class="field-grid two">
+                <label>จังหวัด
+                  <select name="province" class="adminProvince" required></select>
+                </label>
+                <label>อำเภอ
+                  <select name="district" class="adminDistrict" required></select>
+                </label>
+              </div>
+              <label>เบอร์โทรศัพท์
+                <input name="phone" inputmode="tel" required />
+              </label>
+              <button class="primary-btn" type="submit">บันทึก Case manager</button>
+            </form>
+          </article>
+        </section>
+
+        <section id="admin-view-patients" class="admin-view">
+          <article class="admin-card">
+            <div class="admin-section-head">
+              <div>
+                <p class="eyebrow">SMI-V Registry</p>
+                <h3>ทะเบียนผู้ป่วย</h3>
+                <span>รายการผู้ป่วยที่ลงทะเบียนไว้ในระบบ V-SAFE</span>
+              </div>
+              <button id="openPatientForm" class="primary-btn" type="button">ลงทะเบียนผู้ป่วยใหม่</button>
+            </div>
+            <div class="table-wrap">
+              <table class="admin-data-table patient-registry-table">
+                <thead>
+                  <tr>
+                    <th>HN</th>
+                    <th>ชื่อ-สกุล</th>
+                    <th>Dx.</th>
+                    <th>วันที่จำหน่าย</th>
+                    <th>คะแนน/ประเภท/ล่าสุด</th>
+                    <th>อำเภอ</th>
+                    <th>Case manager</th>
+                    <th>จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="adminPatientRows"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article id="patientFormCard" class="admin-card admin-form-card hidden">
+            <div class="admin-section-head compact">
+              <div>
+                <p class="eyebrow">Register</p>
+                <h3 id="patientFormTitle">ลงทะเบียนผู้ป่วย</h3>
+              </div>
+              <button class="secondary-btn" id="cancelPatientForm" type="button">ปิดฟอร์ม</button>
+            </div>
+            <form id="patientForm" class="stack-form">
+              <input name="editingKey" type="hidden" />
+              <div class="field-grid three">
+                <label>รหัสผู้ป่วย
+                  <input name="patientCode" placeholder="HN+SMIV" required />
+                </label>
+                <label>HN
+                  <input name="hn" required />
+                </label>
+                <label>คำนำหน้า
+                  <select name="prefix" required>
+                    <option>นาย</option>
+                    <option>นาง</option>
+                    <option>นางสาว</option>
+                    <option>เด็กชาย</option>
+                    <option>เด็กหญิง</option>
+                  </select>
+                </label>
+              </div>
+              <div class="field-grid three">
+                <label>ชื่อ-สกุล
+                  <input name="fullName" required />
+                </label>
+                <label>เพศ
+                  <select name="gender" required>
+                    <option>ชาย</option>
+                    <option>หญิง</option>
+                  </select>
+                </label>
+                <label>วันเดือนปีเกิด
+                  <input name="dob" type="date" required />
+                </label>
+              </div>
+              <div class="field-grid three">
+                <label>ประวัติการก่อความรุนแรง
+                  <input name="violenceHistoryDate" type="date" />
+                </label>
+                <label>ประวัติการใช้สารเสพติด
+                  <select name="substanceUse" id="patientSubstance">
+                    <option>ไม่ใช้</option>
+                    <option>ใช้</option>
+                  </select>
+                </label>
+                <label>รายละเอียดสารเสพติด
+                  <input name="substanceDetail" />
+                </label>
+              </div>
+              <div class="field-grid three">
+                <label>การวินิจฉัย ICD-10
+                  <input name="dx" placeholder="F20.0" required />
+                </label>
+                <label>วันที่จำหน่าย
+                  <input name="dischargeDate" type="date" required />
+                </label>
+                <label>คะแนน baseline
+                  <input name="baselineScore" type="number" min="0" max="20" value="0" required />
+                </label>
+              </div>
+              <div class="field-grid three">
+                <label>จังหวัด
+                  <select name="province" class="adminProvince" required></select>
+                </label>
+                <label>อำเภอ
+                  <select name="district" class="adminDistrict" required></select>
+                </label>
+                <label>ตำบล
+                  <select name="subdistrict" class="adminSubdistrict" required></select>
+                </label>
+              </div>
+              <div class="field-grid three">
+                <label>รหัสไปรษณีย์
+                  <input name="zipcode" class="adminZipcode" inputmode="numeric" readonly />
+                </label>
+                <label>รายละเอียดที่อยู่
+                  <input name="addressLine" class="adminAddressLine" placeholder="บ้านเลขที่ หมู่ ซอย ถนน" />
+                </label>
+                <label>พิกัดโดยประมาณ
+                  <input name="latlng" class="adminLatLng" placeholder="ระบบคำนวณอัตโนมัติ" readonly />
+                </label>
+              </div>
+              <button class="primary-btn" type="submit">บันทึกผู้ป่วย</button>
+            </form>
+          </article>
+        </section>
+
+        <section id="admin-view-alerts" class="admin-view">
+          <article class="admin-card">
+            <div class="card-title">
+              <h3>รายการแจ้งเตือน</h3>
+              <span>Yellow / Red Zone</span>
+            </div>
+            <div id="alertFeed" class="alert-feed"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="sosDialog" class="sos-dialog">
+      <div class="sos-modal">
+        <div class="siren">!</div>
+        <h2>SOS RED ZONE</h2>
+        <p id="sosDetail">มีผู้ป่วยเข้าสู่ Red Zone</p>
+        <button id="ackSos" class="danger-btn wide">รับทราบภารกิจ</button>
+      </div>
+    </dialog>
+
+    <dialog id="adminDetailDialog" class="admin-detail-dialog">
+      <div>
+        <button class="admin-dialog-close" type="button" data-close-admin-dialog>ปิด</button>
+        <div id="adminDetailContent"></div>
+      </div>
+    </dialog>
+
+    <script src="./app.js?v=13"></script>
+    <script src="./admin.js?v=13"></script>
+  </body>
+</html>
