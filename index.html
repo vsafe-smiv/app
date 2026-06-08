@@ -285,32 +285,32 @@
         
         <section id="view-home" class="view active">
           
-          <div style="background: linear-gradient(145deg, #06345c 0%, #0b678f 100%); border-radius: 0 0 1.75rem 1.75rem; padding: 2rem 1.25rem; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(6, 52, 92, 0.2);">
+          <div style="background: linear-gradient(145deg, #07847f 0%, #138a43 100%); border-radius: 0 0 1.75rem 1.75rem; padding: 2.2rem 1.25rem; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(7, 132, 127, 0.15);">
             
-            <div style="position: absolute; top: -3rem; right: -2rem; width: 12rem; height: 12rem; background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
-            <div style="position: absolute; bottom: 2rem; left: -4rem; width: 10rem; height: 10rem; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
+            <img src="./VSAFE.png" alt="" style="position: absolute; right: -15%; top: -5%; width: 65%; opacity: 0.15; filter: grayscale(1) brightness(2); transform: rotate(-10deg); pointer-events: none; z-index: 1;" />
             
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; position: relative; z-index: 2;">
-              <div>
-                <h2 style="font-size: 1.8rem; font-weight: 700; margin: 0; line-height: 1.2; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">อุ่นใจ</h2>
-                <p style="font-size: 0.9rem; margin: 0.4rem 0 0; color: rgba(255, 255, 255, 0.85); line-height: 1.4;">
-                  ระบบเฝ้าระวังและช่วยเหลือ<br>ผู้ป่วยจิตเวชและครอบครัว
-                </p>
+            <div style="position: relative; z-index: 2; margin-bottom: 2rem;">
+              <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem;">
+                <img src="./icon%20app.png" alt="อุ่นใจ" style="width: 1.8rem; height: 1.8rem; border-radius: 0.4rem; background: white; padding: 2px;" />
+                <span style="color: rgba(255,255,255,0.9); font-weight: 500; font-size: 0.9rem; letter-spacing: 1px;">AUNJAI APPLICATION</span>
               </div>
-              <div style="background: white; padding: 0.4rem; border-radius: 1rem; box-shadow: 0 8px 16px rgba(0,0,0,0.15);">
-                <img src="./VSAFE.png" alt="อุ่นใจ" style="width: 4.5rem; height: 4.5rem; object-fit: contain; border-radius: 0.75rem;" />
-              </div>
+              <h2 style="font-size: 2.2rem; font-weight: 800; margin: 0; line-height: 1; color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.1);">อุ่นใจ</h2>
+              <p style="font-size: 1.1rem; margin: 0.6rem 0 0; color: #e6faf6; font-weight: 400; letter-spacing: 0.2px;">
+                รู้ไว ช่วยทัน อุ่นใจทั้งครอบครัว
+              </p>
             </div>
 
-            <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 1.25rem; padding: 1.25rem; position: relative; z-index: 2;">
-              <div style="display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding-bottom: 0.75rem; margin-bottom: 1rem;">
-                <svg style="color: #4cd964; width: 1.2rem; height: 1.2rem;"><use href="#i-shield"></use></svg>
-                <h3 style="margin: 0; font-size: 1rem; font-weight: 600; color: white; letter-spacing: 0.3px;">ผู้ป่วยในความดูแล</h3>
+            <div style="background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 1.25rem; padding: 1.25rem; position: relative; z-index: 3; box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
+              <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding-bottom: 0.8rem; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                  <svg style="color: #4cd964; width: 1.2rem; height: 1.2rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.233-2.047-.652-2.952z"></path></svg>
+                  <h3 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: white;">ผู้ป่วยในความดูแล</h3>
+                </div>
+                <span style="font-size: 0.75rem; color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 1rem;">Real-time</span>
               </div>
               
               <div id="homePatientList"></div>
             </div>
-
           </div>
 
           <div class="knowledge-section">
