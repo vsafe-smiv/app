@@ -53,7 +53,7 @@
         </div>
         <nav class="side-nav">
           <button class="active" data-admin-view="dashboard"><svg><use href="#i-dashboard"></use></svg><span>Dashboard</span></button>
-          <button data-admin-view="caseManagers"><svg><use href="#i-users"></use></svg><span>Case Manager</span></button>
+          <button data-admin-view="caseManagers"><svg><use href="#i-users"></use></svg><span>โรงพยาบาลพื้นที่</span></button>
           <button data-admin-view="patients"><svg><use href="#i-patient"></use></svg><span>ผู้ป่วย</span></button>
           <button data-admin-view="alerts"><svg><use href="#i-bell"></use></svg><span>แจ้งเตือน</span></button>
         </nav>
@@ -221,10 +221,10 @@
             <div class="admin-section-head">
               <div>
                 <p class="eyebrow">Area Team</p>
-                <h3>Case manager</h3>
-                <span>รายชื่อเจ้าหน้าที่ประจำพื้นที่และข้อมูลติดต่อ</span>
+                <h3>โรงพยาบาลในพื้นที่</h3>
+                <span>รายชื่อเจ้าหน้าที่และข้อมูลติดต่อโรงพยาบาลประจำพื้นที่</span>
               </div>
-              <button id="openCaseManagerForm" class="primary-btn" type="button">ลงทะเบียน Case manager</button>
+              <button id="openCaseManagerForm" class="primary-btn" type="button">ลงทะเบียน รพ.ในพื้นที่</button>
             </div>
             <div class="table-wrap">
               <table class="admin-data-table">
@@ -253,25 +253,11 @@
             </div>
             <form id="caseManagerForm" class="stack-form">
               <input name="id" type="hidden" />
-              <div class="field-grid two">
-                <label>คำนำหน้า
-                  <select name="prefix" required>
-                    <option>นาย</option>
-                    <option>นาง</option>
-                    <option>นางสาว</option>
-                    <option>อื่นๆ</option>
-                  </select>
-                </label>
-                <label>ตำแหน่ง
-                  <input name="position" placeholder="พยาบาลวิชาชีพ" required />
-                </label>
-              </div>
-              <label>ชื่อ-สกุล
-                <input name="fullName" required />
+              
+              <label>ชื่อโรงพยาบาล
+                <input name="workplace" placeholder="เช่น โรงพยาบาลจิตเวชนครสวรรค์ราชนครินทร์" required />
               </label>
-              <label>สถานปฏิบัติงาน
-                <input name="workplace" required />
-              </label>
+              
               <div class="field-grid two">
                 <label>จังหวัด
                   <select name="province" class="adminProvince" required></select>
@@ -280,10 +266,16 @@
                   <select name="district" class="adminDistrict" required></select>
                 </label>
               </div>
+              
               <label>เบอร์โทรศัพท์
-                <input name="phone" inputmode="tel" required />
+                <input name="phone" inputmode="tel" placeholder="056-xxx-xxxx" required />
               </label>
-              <button class="primary-btn" type="submit">บันทึก Case manager</button>
+              
+              <input name="prefix" type="hidden" value="" />
+              <input name="fullName" type="hidden" value="-" />
+              <input name="position" type="hidden" value="-" />
+              
+              <button class="primary-btn" type="submit">บันทึกข้อมูลโรงพยาบาล</button>
             </form>
           </article>
         </section>
@@ -308,7 +300,7 @@
                     <th>วันที่จำหน่าย</th>
                     <th>คะแนน/ประเภท/ล่าสุด</th>
                     <th>อำเภอ</th>
-                    <th>Case manager</th>
+                    <th>โรงพยาบาลพื้นที่</th>
                     <th>จัดการ</th>
                   </tr>
                 </thead>
@@ -321,9 +313,9 @@
             <div class="admin-section-head compact">
               <div>
                 <p class="eyebrow">Register</p>
-                <h3 id="patientFormTitle">ลงทะเบียนผู้ป่วย</h3>
+                <h3 id="caseManagerFormTitle">ลงทะเบียนโรงพยาบาลในพื้นที่</h3>
               </div>
-              <button class="secondary-btn" id="cancelPatientForm" type="button">ปิดฟอร์ม</button>
+              <button class="secondary-btn" id="cancelCaseManagerForm" type="button">ปิดฟอร์ม</button>
             </div>
             <form id="patientForm" class="stack-form">
               <input name="editingKey" type="hidden" />
