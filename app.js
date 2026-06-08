@@ -1388,3 +1388,38 @@ function initUserApp() {
 
 ensureSeedData();
 document.addEventListener("DOMContentLoaded", initUserApp);
+
+// ==========================================
+// ระบบตรวจสอบเงื่อนไขความยินยอม (Consent Logic)
+// ==========================================
+function initConsentLogic() {
+  const check1 = document.getElementById('consentCheck1');
+  const check2 = document.getElementById('consentCheck2');
+  const radioAgree = document.getElementById('consentRadioAgree');
+  const radioDisagree = document.getElementById('consentRadioDisagree');
+  const nextBtn = document.getElementById('step1NextBtn'); // ปุ่ม ถัดไป ในหน้าแรก
+
+  // ถ้าไม่มี UI ให้ข้ามไป
+  if (!check1 || !check2 || !radioAgree || !radioDisagree || !nextBtn) return;
+
+  // ฟังก์ชันเช็กเงื่อนไข (จะทำงานทุกครั้งที่มีการคลิกเลือก)
+  const evaluateConsent = () => {
+    // ต้องติ๊กถูกทั้งสองข้อ และ เลือก "ยินยอม" เท่านั้น
+    const isFullyConsented = check1.checked && check2.checked && radioAgree.checked;
+    
+    // ปลดล็อก (false) หรือ ล็อก (true) ปุ่มถัดไป
+    nextBtn.disabled = !isFullyConsented;
+  };
+
+  // ดักจับการเปลี่ยนแปลง (change) ของทุกๆ ตัวเลือก
+  const consentInputs = document.querySelectorAll('.consent-input');
+  consentInputs.forEach(input => {
+    input.addEventListener('change', evaluateConsent);
+  });
+
+  // รันเช็กครั้งแรกเมื่อโหลดหน้า
+  evaluateConsent();
+}
+document.addEventListener("DOMContentLoaded", () => {
+  initConsentLogic(); // เรียกใช้งานระบบ Consent
+});
