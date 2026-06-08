@@ -100,6 +100,109 @@
         font-size: 0.8rem;
         font-weight: 400;
       }
+      /* =========================================
+         สไตล์สำหรับหนังสือแสดงความยินยอม (Consent)
+         ========================================= */
+      .consent-wrapper {
+        background: white;
+        border-radius: 1rem;
+        padding: 1rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e2e8f0;
+        margin-bottom: 1.5rem;
+      }
+      
+      /* กล่องเลื่อนได้ */
+      .consent-scrollbox {
+        max-height: 35vh; /* ความสูงคงที่ เหมาะกับจอมือถือ */
+        overflow-y: auto;
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.75rem;
+        padding: 1.25rem;
+        margin-bottom: 1.25rem;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        color: #334155;
+      }
+      
+      /* แต่ง Scrollbar ให้สวยงาม */
+      .consent-scrollbox::-webkit-scrollbar {
+        width: 6px;
+      }
+      .consent-scrollbox::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+      }
+      .consent-scrollbox::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+        border-radius: 4px;
+      }
+      
+      .consent-scrollbox h4 {
+        color: #0f766e;
+        margin: 1.2rem 0 0.5rem 0;
+        font-size: 1.05rem;
+      }
+      
+      .consent-scrollbox ul {
+        padding-left: 1.5rem;
+        margin-top: 0.5rem;
+      }
+      
+      /* Checkbox & Radio Styles */
+      .consent-checkbox-group, .consent-radio-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.8rem;
+        margin-bottom: 1rem;
+      }
+      
+      .custom-check-label, .custom-radio-label {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        font-size: 0.95rem;
+        color: #1e293b;
+        cursor: pointer;
+        line-height: 1.4;
+        padding: 0.5rem;
+        border-radius: 0.5rem;
+        transition: background 0.2s;
+      }
+      
+      .custom-check-label:hover, .custom-radio-label:hover {
+        background: #f1f5f9;
+      }
+      
+      .custom-check-label input[type="checkbox"], 
+      .custom-radio-label input[type="radio"] {
+        width: 1.2rem;
+        height: 1.2rem;
+        margin-top: 0.15rem;
+        accent-color: #0f766e; /* ใช้สีเขียวมรกต */
+        cursor: pointer;
+      }
+      
+      /* เน้นสี Radio Button */
+      .custom-radio-label.agree {
+        background: #f0fdfa;
+        border: 1px solid #ccfbf1;
+        font-weight: 600;
+      }
+      .custom-radio-label.disagree {
+        background: #fef2f2;
+        border: 1px solid #fee2e2;
+        color: #dc2626;
+      }
+      
+      /* ปิดปุ่ม ถัดไป ให้ออกสีเทาจางเมื่อไม่ได้กรอกครบ */
+      #step1NextBtn:disabled {
+        background: #cbd5e1 !important;
+        color: #64748b !important;
+        cursor: not-allowed;
+        box-shadow: none !important;
+      }
     </style>
   </head>
   <body class="app-body user-app">
@@ -180,6 +283,82 @@
             <div data-step-dot="3"><span>3</span><strong>ผู้ป่วย</strong></div>
             <div data-step-dot="4"><span>4</span><strong>พื้นที่</strong></div>
           </div>
+
+          <div class="consent-wrapper">
+            <div class="consent-scrollbox">
+              <h3 style="text-align: center; color: #0f766e; margin-top: 0;">หนังสือแสดงความยินยอมการใช้งาน<br>V-SAFE Application<br><small style="font-weight: 400; color: #64748b;">(V-SAFE Application Consent Form)</small></h3>
+              
+              <p>V-SAFE Application เป็นระบบสนับสนุนการดูแลผู้ป่วยจิตเวชกลุ่มเสี่ยงสูงต่อการก่อความรุนแรง (Serious Mental Illness with High Risk to Violence: SMI-V) ที่พัฒนาขึ้นเพื่อส่งเสริมความรู้และทักษะของญาติผู้ดูแล สนับสนุนการเฝ้าระวังความเสี่ยง และเชื่อมโยงการเข้าถึงความช่วยเหลือด้านสุขภาพจิตอย่างทันท่วงที</p>
+          
+              <h4>1. วัตถุประสงค์ของการใช้งาน</h4>
+              <p>ระบบ V-SAFE มีวัตถุประสงค์เพื่อ</p>
+              <ul>
+                <li>สนับสนุนการดูแลผู้ป่วยจิตเวชในชุมชนอย่างต่อเนื่อง</li>
+                <li>ส่งเสริมความรู้และทักษะของญาติผู้ดูแลในการสังเกตอาการเตือนและการจัดการพฤติกรรมก้าวร้าวเบื้องต้น</li>
+                <li>สนับสนุนการเฝ้าระวังความเสี่ยงและการเข้าถึงความช่วยเหลือด้านสุขภาพจิต</li>
+                <li>เพิ่มความปลอดภัยของผู้ป่วย ครอบครัว และชุมชน</li>
+              </ul>
+          
+              <h4>2. ข้อมูลที่อาจมีการจัดเก็บในระบบ</h4>
+              <p>ข้อมูลที่บันทึกในระบบอาจประกอบด้วย</p>
+              <ul>
+                <li>ข้อมูลทั่วไปของผู้ป่วย</li>
+                <li>ข้อมูลของญาติหรือผู้ดูแล</li>
+                <li>ข้อมูลการติดตามอาการและพฤติกรรม</li>
+                <li>ข้อมูลการประเมินความเสี่ยงและสัญญาณเตือน</li>
+                <li>ข้อมูลการใช้บริการภายในระบบ</li>
+              </ul>
+          
+              <h4>3. การใช้ข้อมูล</h4>
+              <p>ข้อมูลที่ได้รับจะถูกนำไปใช้เพื่อ</p>
+              <ul>
+                <li>การดูแลรักษาและติดตามผู้ป่วย</li>
+                <li>การประสานงานระหว่างครอบครัว ชุมชน และทีมสุขภาพจิต</li>
+                <li>การพัฒนาคุณภาพระบบบริการสุขภาพจิต</li>
+                <li>การประเมินประสิทธิภาพของระบบ V-SAFE</li>
+              </ul>
+              <p>โดยจะไม่เปิดเผยข้อมูลแก่บุคคลภายนอกที่ไม่เกี่ยวข้อง เว้นแต่ได้รับความยินยอมจากเจ้าของข้อมูล หรือเป็นไปตามที่กฎหมายกำหนด</p>
+          
+              <h4>4. การคุ้มครองข้อมูลส่วนบุคคล</h4>
+              <p>ระบบ V-SAFE ให้ความสำคัญต่อการคุ้มครองข้อมูลส่วนบุคคลตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA)<br>ข้อมูลของท่านจะถูกจัดเก็บอย่างปลอดภัย และจำกัดสิทธิ์การเข้าถึงเฉพาะบุคลากรที่เกี่ยวข้องกับการดูแลผู้ป่วยตามความจำเป็นเท่านั้น</p>
+          
+              <h4>5. สิทธิของผู้ใช้งาน</h4>
+              <p>ท่านมีสิทธิ</p>
+              <ul>
+                <li>รับทราบรายละเอียดเกี่ยวกับการเก็บและใช้ข้อมูล</li>
+                <li>ขอแก้ไขข้อมูลที่ไม่ถูกต้อง</li>
+                <li>ถอนความยินยอมในการใช้งานระบบได้ทุกเมื่อ</li>
+              </ul>
+              <p>ทั้งนี้ การถอนความยินยอมอาจส่งผลให้ไม่สามารถใช้งานระบบ V-SAFE ได้ต่อไป</p>
+          
+              <h4>6. ข้อจำกัดของระบบ</h4>
+              <p>V-SAFE Application เป็นเครื่องมือสนับสนุนการให้ความรู้ การพัฒนาทักษะผู้ดูแล การเฝ้าระวังความเสี่ยง และการเชื่อมโยงความช่วยเหลือด้านสุขภาพจิต<br>ระบบนี้ไม่ใช่เครื่องมือวินิจฉัยโรค และไม่สามารถทดแทนการประเมิน การวินิจฉัย หรือการตัดสินใจทางการแพทย์โดยบุคลากรสุขภาพได้<br><strong>หากผู้ป่วยมีความเสี่ยงทำร้ายตนเอง ผู้อื่น หรือเกิดภาวะฉุกเฉิน ควรรีบติดต่อหน่วยบริการสุขภาพหรือหน่วยงานฉุกเฉินโดยทันที</strong></p>
+            </div>
+          
+            <div class="consent-checkbox-group">
+              <label class="custom-check-label">
+                <input type="checkbox" id="consentCheck1" class="consent-input">
+                <span>ข้าพเจ้าได้อ่านและเข้าใจรายละเอียดการใช้งาน V-SAFE Application รวมถึงการเก็บ ใช้ และคุ้มครองข้อมูลส่วนบุคคลแล้ว</span>
+              </label>
+              <label class="custom-check-label">
+                <input type="checkbox" id="consentCheck2" class="consent-input">
+                <span>ข้าพเจ้ายินยอมให้มีการเก็บและใช้ข้อมูลตามวัตถุประสงค์ที่กำหนด เพื่อประโยชน์ในการดูแลผู้ป่วยและการพัฒนาระบบบริการสุขภาพจิต</span>
+              </label>
+            </div>
+          
+            <div class="consent-radio-group">
+              <label class="custom-radio-label agree">
+                <input type="radio" name="consentRadio" value="agree" id="consentRadioAgree" class="consent-input">
+                <span>ยินยอมเข้าร่วมใช้งาน V-SAFE Application</span>
+              </label>
+              <label class="custom-radio-label disagree">
+                <input type="radio" name="consentRadio" value="disagree" id="consentRadioDisagree" class="consent-input">
+                <span>ไม่ยินยอมเข้าร่วมใช้งาน V-SAFE Application</span>
+              </label>
+            </div>
+          
+          </div>
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 1.5rem 0;">
 
           <div class="form-card auth-inner-card register-step active" data-register-step="1">
             <h3>สร้างบัญชีผู้ดูแล</h3>
