@@ -114,30 +114,30 @@
       
       /* กล่องเลื่อนได้ */
       .consent-scrollbox {
-        max-height: 35vh; /* ความสูงคงที่ เหมาะกับจอมือถือ */
-        overflow-y: auto;
-        background: #f8fafc;
-        border: 1px solid #cbd5e1;
-        border-radius: 0.75rem;
-        padding: 1.25rem;
-        margin-bottom: 1.25rem;
-        font-size: 0.95rem;
-        line-height: 1.6;
-        color: #334155;
-      }
-      
-      /* แต่ง Scrollbar ให้สวยงาม */
-      .consent-scrollbox::-webkit-scrollbar {
-        width: 6px;
-      }
-      .consent-scrollbox::-webkit-scrollbar-track {
-        background: #f1f5f9;
-        border-radius: 4px;
-      }
-      .consent-scrollbox::-webkit-scrollbar-thumb {
-        background: #94a3b8;
-        border-radius: 4px;
-      }
+      max-height: 55vh; /* เพิ่มความสูงเป็น 55vh เพื่อให้มีพื้นที่แสดงทั้งเนื้อหาและจุดกดยินยอม */
+      overflow-y: auto;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0; /* ปรับสีขอบให้ซอฟต์ลงและเนียนตาขึ้น */
+      border-radius: 0.75rem;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: #334155;
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.03); /* เพิ่มเงาด้านในเบาๆ ให้ดูเป็นกล่องที่เลื่อนได้ชัดเจนขึ้น */
+    }
+    
+    /* เพิ่มส่วนนี้หากต้องการให้แถบ Scrollbar ดูสวยงามขึ้นบนมือถือ/เว็บ */
+    .consent-scrollbox::-webkit-scrollbar {
+      width: 6px;
+    }
+    .consent-scrollbox::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .consent-scrollbox::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
       
       .consent-scrollbox h4 {
         color: #0f766e;
@@ -338,36 +338,34 @@
             
                 <h4>6. ข้อจำกัดของระบบ</h4>
                 <p>V-SAFE Application เป็นเครื่องมือสนับสนุนการให้ความรู้ การพัฒนาทักษะผู้ดูแล การเฝ้าระวังความเสี่ยง และการเชื่อมโยงความช่วยเหลือด้านสุขภาพจิต<br>ระบบนี้ไม่ใช่เครื่องมือวินิจฉัยโรค และไม่สามารถทดแทนการประเมิน การวินิจฉัย หรือการตัดสินใจทางการแพทย์โดยบุคลากรสุขภาพได้<br><strong>หากผู้ป่วยมีความเสี่ยงทำร้ายตนเอง ผู้อื่น หรือเกิดภาวะฉุกเฉิน ควรรีบติดต่อหน่วยบริการสุขภาพหรือหน่วยงานฉุกเฉินโดยทันที</strong></p>
-              </div>
-            
-              <div class="consent-checkbox-group">
+                <hr style="border: 0; border-top: 1px solid #cbd5e1; margin: 1.5rem 0;"><div class="consent-checkbox-group">
                 <label class="custom-check-label">
-                  <input type="checkbox" id="consentCheck1" class="consent-input">
-                  <span>ข้าพเจ้าได้อ่านและเข้าใจรายละเอียดการใช้งาน V-SAFE Application รวมถึงการเก็บ ใช้ และคุ้มครองข้อมูลส่วนบุคคลแล้ว</span>
+                    <input type="checkbox" id="consentCheck1" class="consent-input">
+                    <span>ข้าพเจ้าได้อ่านและเข้าใจรายละเอียดการใช้งาน V-SAFE Application รวมถึงการเก็บ ใช้ และคุ้มครองข้อมูลส่วนบุคคลแล้ว</span>
                 </label>
                 <label class="custom-check-label">
-                  <input type="checkbox" id="consentCheck2" class="consent-input">
-                  <span>ข้าพเจ้ายินยอมให้มีการเก็บและใช้ข้อมูลตามวัตถุประสงค์ที่กำหนด เพื่อประโยชน์ในการดูแลผู้ป่วยและการพัฒนาระบบบริการสุขภาพจิต</span>
+                    <input type="checkbox" id="consentCheck2" class="consent-input">
+                    <span>ข้าพเจ้ายินยอมให้มีการเก็บและใช้ข้อมูลตามวัตถุประสงค์ที่กำหนด เพื่อประโยชน์ในการดูแลผู้ป่วยและการพัฒนาระบบบริการสุขภาพจิต</span>
                 </label>
-              </div>
-            
-              <div class="consent-radio-group">
+            </div>
+
+            <div class="consent-radio-group" style="margin-top: 1.5rem;">
                 <label class="custom-radio-label agree">
-                  <input type="radio" name="consentRadio" value="agree" id="consentRadioAgree" class="consent-input">
-                  <span>ยินยอมเข้าร่วมใช้งาน V-SAFE Application</span>
+                    <input type="radio" name="consentRadio" value="agree" id="consentRadioAgree" class="consent-input">
+                    <span>ยินยอมเข้าร่วมใช้งาน V-SAFE Application</span>
                 </label>
-                <label class="custom-radio-label disagree">
-                  <input type="radio" name="consentRadio" value="disagree" id="consentRadioDisagree" class="consent-input">
-                  <span>ไม่ยินยอมเข้าร่วมใช้งาน V-SAFE Application</span>
+                <label class="custom-radio-label disagree" style="margin-top: 0.5rem;">
+                    <input type="radio" name="consentRadio" value="disagree" id="consentRadioDisagree" class="consent-input">
+                    <span>ไม่ยินยอมเข้าร่วมใช้งาน V-SAFE Application</span>
                 </label>
-              </div>
-            
             </div>
-            
-            <div class="wizard-actions single" style="margin-top: 1rem;">
-              <button class="primary-btn wide" data-register-next id="step1NextBtn" disabled type="button">ถัดไป</button>
             </div>
-          </div>
+    </div>
+    
+    <div class="wizard-actions single">
+        <button class="primary-btn wide" data-register-next id="step1NextBtn" disabled type="button">ถัดไป</button>
+    </div>
+</div>
 
           <div class="form-card auth-inner-card register-step" data-register-step="2">
             <h3>สร้างบัญชีผู้ดูแล</h3>
