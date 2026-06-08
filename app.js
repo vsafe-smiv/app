@@ -1065,23 +1065,23 @@ function initAssessmentForm() {
 
 function showResultDialog(assessment) {
   const dialog = document.querySelector("#resultDialog");
-  if (!dialog) return;
-
-  const activePatient = getActivePatient();
-  const cm = (activePatient && typeof findCaseManager === "function") ? findCaseManager(activePatient.district) : null;
-
-  let riskLevelName = "ต่ำ";
-  let zoneColor = "#4cd964"; // สีเขียวสำหรับเสี่ยงต่ำ
+  const content = document.querySelector("#resultContent");
+  const advice = zoneAdvice[assessment.zone];
+  const cm = findCaseManager(assessment.district);
   
-  if (assessment.zone === "YELLOW") {
-    riskLevelName = "ปานกลาง";
-    zoneColor = "#f59e0b"; // สีส้มสำหรับเสี่ยงปานกลาง
-  } else if (assessment.zone === "RED") {
-    riskLevelName = "สูง";
-    zoneColor = "#ef4444"; // สีแดงสำหรับเสี่ยงสูง
-  }
+  if (!dialog || !content) return;
 
-  // 1. สร้างบล็อกคลังความรู้แยกตามกลุ่มเสี่ยง (ต่ำ, ปานกลาง, สูง) เพื่อแสดงก่อนเบอร์ติดต่อ
+  // 1. ดึงข้อควรสังเกตเพิ่มเติม (สำหรับโซนสีเหลือง)
+  const extra = assessment.zone === "YELLOW"
+    ? `<h3>สิ่งที่ผู้ดูแลควรสังเกตเพิ่มเติม</h3><ul class="advice-list">${advice.observe.map((item) => `<li>${item}</li>`).join("")}</ul>`
+    : "";
+
+  // 2. กำหนดชื่อกลุ่มเสี่ยงเพื่อแสดงในบล็อกคลังความรู้
+  let riskLevelName = "ต่ำ";
+  if (assessment.zone === "YELLOW") riskLevelName = "ปานกลาง";
+  if (assessment.zone === "RED") riskLevelName = "สูง";
+
+  // 3. สร้างบล็อกคลังความรู้แบบใหม่ (กดแล้วกรองตามกลุ่มเสี่ยงอัตโนมัติ)
   const knowledgeBlockHtml = `
     <div onclick="if(typeof filterKnowledgeByZone === 'function') filterKnowledgeByZone('${assessment.zone}'); document.querySelector('[data-nav=\\'knowledge\\']')?.click(); document.querySelector('#resultDialog')?.close();" 
          style="background: #f0fdfa; border: 1px solid #0f766e; border-radius: 1rem; padding: 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; box-shadow: 0 4px 12px rgba(15, 118, 110, 0.05); text-align: left; transition: transform 0.2s;">
@@ -1096,27 +1096,40 @@ function showResultDialog(assessment) {
     </div>
   `;
 
-  // 2. ส่วนปุ่มดำเนินการหลักด้านล่าง (ถอดปุ่มเปิดคลังความรู้เดิมออกแล้ว)
-  const actionButtonHtml = assessment.zone === "RED"
-    ? `<a class="danger-btn wide" href="tel:${cm?.phone || "1669"}" style="display: block; text-align: center; background: #ef4444; color: white; padding: 0.85rem; border-radius: 1rem; font-weight: 700; text-decoration: none; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); font-size: 1rem;">SOS โทรโรงพยาบาลในพื้นที่ ทันที</a>`
-    : `<button class="secondary-btn wide" onclick="document.querySelector('#resultDialog')?.close();" style="width: 100%; padding: 0.85rem; border-radius: 1rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; font-size: 1rem; cursor: pointer;">รับทราบ</button>`;
+  // 4. ปุ่มฉุกเฉิน (มีเฉพาะปุ่มแดง SOS สำหรับ RED zone) - เอาปุ่มเปิดคลังความรู้รูปแบบเก่าออกแล้ว
+  const emergency = assessment.zone === "RED"
+    ? `<a class="danger-btn wide" href="tel:${cm?.phone || "1669"}">SOS โทรโรงพยาบาลในพื้นที่ ทันที</a>`
+    : ``; 
 
-  dialog.innerHTML = `
-    <div style="padding: 1.5rem 1.25rem; text-align: center;">
-      <div style="width: 4rem; height: 4rem; background: ${zoneColor}15; color: ${zoneColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem;">
-        <svg style="width: 2.2rem; height: 2.2rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-      </div>
-      <h2 style="margin: 0 0 0.4rem; font-size: 1.35rem; color: #1e293b; font-weight: 700;">บันทึกผลประเมินเรียบร้อย</h2>
-      <p style="margin: 0 0 1.5rem; color: #64748b; font-size: 0.95rem;">ผลการประเมินล่าสุดอยู่ในกลุ่ม: <strong style="color: ${zoneColor}; font-weight: 700;">เสี่ยง${riskLevelName}</strong></p>
-      
-      ${knowledgeBlockHtml}
-      
-      ${actionButtonHtml}
+  // 5. โครงสร้าง HTML ที่ดึงการประเมิน ผลลัพธ์ คำแนะนำ และเบอร์โทรกลับมาตามโครงสร้างเดิมทั้งหมด
+  content.innerHTML = `
+    <div class="result-header ${zoneClass(assessment.zone)}">
+      <p>${advice.label} | คะแนน ${assessment.score}</p>
+      <h2>${advice.title}</h2>
+      <span>${advice.description}</span>
+    </div>
+    
+    <h3>คำแนะนำสำหรับผู้ดูแล</h3>
+    <ul class="advice-list">${advice.steps.map((item) => `<li>${item}</li>`).join("")}</ul>
+    ${extra}
+    
+    ${knowledgeBlockHtml}
+    
+    <div class="contact-list">
+      ${contactItems(cm).map(contactHtml).join("")}
+    </div>
+    
+    <div class="dialog-actions single">
+      ${emergency}
+      <button class="primary-btn wide" data-close-dialog>รับทราบ</button>
     </div>
   `;
-  
+
+  // ผูกคำสั่งให้ปุ่ม "รับทราบ" ปิด Pop-up
+  content.querySelector("[data-close-dialog]")?.addEventListener("click", () => dialog.close());
   dialog.showModal();
 }
+
 // ฟังก์ชันสลับการแสดงผลคลังความรู้ 9 รายการ (แก้ไขจุดพิมพ์ผิดเรียบร้อย)
 function filterKnowledgeByZone(zone) {
   const knowledgeGrids = document.querySelectorAll(".knowledge-grid");
