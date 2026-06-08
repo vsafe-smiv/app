@@ -543,6 +543,25 @@
       <div id="resultContent"></div>
     </dialog>
 
+    <dialog id="dueAssessmentDialog" class="result-dialog">
+      <div style="padding: 1.5rem 1rem; text-align: center;">
+        <div style="background: #e6faf6; color: #0f766e; width: 4.5rem; height: 4.5rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; box-shadow: 0 4px 15px rgba(15, 118, 110, 0.15);">
+          <svg style="width: 2.2rem; height: 2.2rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+        </div>
+        
+        <h2 style="color: #0f766e; margin: 0 0 0.5rem; font-size: 1.3rem;">ครบรอบกำหนดประเมิน</h2>
+        <p style="color: #475569; margin: 0 0 1.5rem; line-height: 1.6; font-size: 0.95rem;">
+          วันนี้ผู้ป่วยเป็นอย่างไรบ้าง? <br>
+          ถึงรอบประเมินอาการของ <strong id="duePatientName">ผู้ป่วย</strong> แล้ว
+        </p>
+        
+        <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+          <button class="primary-btn wide" id="btnStartDueAssessment" style="background: #0f766e; font-size: 1rem; padding: 0.8rem;">เริ่มประเมิน</button>
+          <button class="ghost-link" id="btnCloseDueDialog" style="color: #64748b; font-size: 0.9rem;">ไว้ทีหลัง</button>
+        </div>
+      </div>
+    </dialog>
+
     <script src="./app.js?v=13"></script>
   </body>
 </html>
