@@ -3845,3 +3845,9 @@ dialog::backdrop {
     grid-template-columns: 1fr;
   }
 }
+#step1NextBtn:disabled {
+  background: #cbd5e1 !important;
+  color: #64748b !important;
+  cursor: not-allowed;
+  box-shadow: none !important;
+}
