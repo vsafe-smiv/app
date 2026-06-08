@@ -1220,6 +1220,38 @@ function renderHomeNextAssessment() {
   }
 }
 
+// ฟังก์ชันควบคุม Pop-up แจ้งเตือน
+function checkAndShowDuePopup(activePatient) {
+  // บันทึก Session เพื่อให้เด้งแค่ครั้งแรกที่เข้าแอปในแต่ละวัน ป้องกันการเด้งซ้ำซ้อนน่ารำคาญ
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const cacheKey = `notifiedDue_${activePatient.patientCode}_${todayStr}`;
+  
+  if (sessionStorage.getItem(cacheKey)) return; // ถ้าวันนี้เคยเด้งเตือนคนนี้แล้ว ให้ข้ามไป
+
+  const dialog = document.querySelector("#dueAssessmentDialog");
+  if (!dialog) return;
+
+  // ใส่รหัสผู้ป่วย/HN ลงในข้อความเพื่อความชัดเจน
+  const nameLabel = document.querySelector("#duePatientName");
+  if(nameLabel) nameLabel.textContent = `รหัส ${activePatient.patientCode}`;
+
+  dialog.showModal();
+  sessionStorage.setItem(cacheKey, "true"); // จำไว้ว่าเด้งแล้ว
+}
+
+// ตั้งค่าปุ่มใน Pop-up แจ้งเตือน (ให้ทำงานเมื่อแอปโหลดเสร็จ)
+document.addEventListener("DOMContentLoaded", () => {
+  document.querySelector("#btnStartDueAssessment")?.addEventListener("click", () => {
+    document.querySelector("#dueAssessmentDialog")?.close();
+    // จำลองการกดปุ่มเมนู "ประเมิน" ด้านล่างเพื่อกระโดดไปหน้าประเมิน
+    document.querySelector('[data-nav="assessment"]')?.click();
+  });
+  
+  document.querySelector("#btnCloseDueDialog")?.addEventListener("click", () => {
+    document.querySelector("#dueAssessmentDialog")?.close();
+  });
+});
+
 function renderHistory() {
   const container = document.querySelector("#historyList");
   if (!container) return;
