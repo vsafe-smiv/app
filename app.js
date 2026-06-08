@@ -1101,23 +1101,115 @@ function showResultDialog(assessment) {
 }
 
 function renderHomeNextAssessment() {
-  const target = document.querySelector("#nextAssessment");
-  if (!target) return;
+  const dateTarget = document.querySelector("#nextAssessmentDateText");
+  const statusTarget = document.querySelector("#nextAssessmentStatus");
+  const countdownTarget = document.querySelector("#nextAssessmentCountdown");
+  
+  if (!dateTarget) return;
+
   const active = getActivePatient();
-  const assessments = getLinkedAssessments()
-    .filter((assessment) => !active || assessment.patientCode === active.patientCode)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  if (!assessments.length) {
-    target.textContent = "ยังไม่มีข้อมูล";
+  if (!active) {
+    dateTarget.textContent = "ไม่มีข้อมูล";
+    if (statusTarget) statusTarget.textContent = "กรุณาเพิ่มผู้ป่วย";
+    if (countdownTarget) countdownTarget.textContent = "";
     return;
   }
-  const latest = assessments[0];
-  const patient = findPatient(latest.patientCode);
-  const discharge = patient?.dischargeDate ? new Date(patient.dischargeDate) : new Date(latest.createdAt);
-  const daysAfterDischarge = Math.floor((Date.now() - discharge.getTime()) / 86400000);
-  const intervalDays = daysAfterDischarge <= 30 ? 7 : 14;
-  const next = new Date(new Date(latest.createdAt).getTime() + intervalDays * 86400000);
-  target.textContent = formatThaiDateTime(next);
+
+  // ดึงประวัติการประเมินของผู้ป่วยรายนี้และเรียงจาก ใหม่สุด ไป เก่าสุด
+  const assessments = getLinkedAssessments()
+    .filter((assessment) => assessment.patientCode === active.patientCode)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  // กรณีเพิ่งเพิ่มผู้ป่วย ยังไม่มีประวัติการประเมิน
+  if (!assessments.length) {
+    dateTarget.textContent = "ประเมินทันที";
+    dateTarget.style.color = "#ef4444"; // สีแดงแจ้งเตือน
+    if (statusTarget) statusTarget.textContent = "ยังไม่มีประวัติในระบบ";
+    if (countdownTarget) {
+      countdownTarget.textContent = "รอการประเมินครั้งแรก";
+      countdownTarget.style.color = "#ef4444";
+    }
+    return;
+  }
+
+  // ============================================
+  // LOGIC ENGINE: ระบบคำนวณรอบการประเมิน
+  // ============================================
+  let consecutiveGreenCount = 0;
+  
+  // นับจำนวนลูป "สีเขียวติดต่อกัน" (ย้อนกลับไปในอดีต)
+  for (const assessment of assessments) {
+    if (assessment.zone === "GREEN") {
+      consecutiveGreenCount++;
+    } else {
+      break; // กฎการรีเซ็ต (Reset Rule): หยุดนับทันทีเมื่อเจอเหลืองหรือแดง
+    }
+  }
+
+  const latest = assessments[0]; // การประเมินครั้งล่าสุด
+  let intervalDays = 7;
+  let statusText = "";
+
+  // คำนวณตามกฎ Business Rules
+  if (latest.zone === "RED") {
+    // กฎข้อ 1: สีแดง ประเมินทุก 24 ชั่วโมง
+    intervalDays = 1;
+    statusText = "สถานะสีแดง: ประเมินซ้ำทุก 1 วัน";
+  } else if (latest.zone === "YELLOW") {
+    // กฎข้อ 2: สีเหลือง ประเมินทุก 48 ชั่วโมง
+    intervalDays = 2;
+    statusText = "สถานะสีเหลือง: ประเมินซ้ำทุก 2 วัน";
+  } else if (latest.zone === "GREEN") {
+    if (consecutiveGreenCount <= 4) {
+      // กฎข้อ 3: สีเขียว ระดับที่ 1 (ครั้งที่ 1-4)
+      intervalDays = 7;
+      statusText = `สถานะสีเขียว (ระดับ 1): ประเมินทุก 7 วัน`;
+    } else if (consecutiveGreenCount <= 6) {
+      // กฎข้อ 4: สีเขียว ระดับที่ 2 (ครั้งที่ 5-6)
+      intervalDays = 14;
+      statusText = `สถานะสีเขียว (ระดับ 2): ประเมินทุก 14 วัน`;
+    } else {
+      // กฎข้อ 5: สีเขียว ระดับที่ 3 (ครั้งที่ 7 เป็นต้นไป)
+      intervalDays = 30;
+      statusText = `สถานะสีเขียว (ระดับ 3): ประเมินทุก 30 วัน`;
+    }
+  }
+
+  // คำนวณวันที่รอบถัดไป
+  const lastDate = new Date(latest.createdAt);
+  const nextDate = new Date(lastDate.getTime() + intervalDays * 86400000);
+  
+  // จัดรูปแบบการแสดงผลวันที่ (ภาษาไทย)
+  const options = { day: 'numeric', month: 'short', year: 'numeric' };
+  dateTarget.textContent = nextDate.toLocaleDateString('th-TH', options);
+
+  if (statusTarget) statusTarget.textContent = statusText;
+
+  // คำนวณจำนวนวันคงเหลือ (Countdown) แจ้งเตือนผู้ใช้งาน
+  if (countdownTarget) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // รีเซ็ตเวลาของวันนี้ให้เป็น 00:00:00
+    
+    const nextDateOnly = new Date(nextDate);
+    nextDateOnly.setHours(0, 0, 0, 0); // รีเซ็ตเวลาของวันนัดให้เป็น 00:00:00
+    
+    const diffTime = nextDateOnly - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays > 0) {
+      countdownTarget.textContent = `อีก ${diffDays} วัน`;
+      countdownTarget.style.color = "#64748b"; // สีเทาปกติ
+      dateTarget.style.color = "#0f766e"; // สีเขียวหลัก
+    } else if (diffDays === 0) {
+      countdownTarget.textContent = "ครบกำหนดวันนี้!";
+      countdownTarget.style.color = "#f59e0b"; // สีเหลืองเตือน
+      dateTarget.style.color = "#f59e0b";
+    } else {
+      countdownTarget.textContent = `เกินกำหนด ${Math.abs(diffDays)} วัน!`;
+      countdownTarget.style.color = "#ef4444"; // สีแดงอันตราย
+      dateTarget.style.color = "#ef4444";
+    }
+  }
 }
 
 function renderHistory() {
