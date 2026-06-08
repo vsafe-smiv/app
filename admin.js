@@ -129,7 +129,7 @@ function initAdminForms() {
     }
     storage.set("caseManagers", caseManagers);
     await apiPost("saveCaseManager", payload);
-    alert("บันทึก Case manager แล้ว");
+    alert("บันทึกข้อมูลโรงพยาบาลแล้ว");
     form.reset();
     hideCaseManagerForm();
     setupAddressSelects(document);
@@ -167,14 +167,20 @@ function initAdminForms() {
 function showCaseManagerForm(cm = null) {
   const card = document.querySelector("#caseManagerFormCard");
   const form = document.querySelector("#caseManagerForm");
+  const title = document.querySelector("#caseManagerFormTitle");
   if (!card || !form) return;
   form.reset();
-  document.querySelector("#caseManagerFormTitle").textContent = cm ? "แก้ไขข้อมูล Case manager" : "ลงทะเบียน Case manager";
-  form.elements.id.value = cm?.id || "";
+  if (title) title.textContent = cm ? "แก้ไขข้อมูลโรงพยาบาลในพื้นที่" : "ลงทะเบียนโรงพยาบาลในพื้นที่";
+  
+  if (form.elements.id) form.elements.id.value = cm?.id || "";
+  
   if (cm) {
-    ["prefix", "fullName", "position", "workplace", "phone"].forEach((name) => {
-      if (form.elements[name]) form.elements[name].value = cm[name] || "";
-    });
+    if (form.elements.workplace) form.elements.workplace.value = cm.workplace || "";
+    if (form.elements.phone) form.elements.phone.value = cm.phone || "";
+    // ฟิลด์ที่ซ่อนไว้เพื่อป้องกันข้อมูลเดิมสูญหาย
+    if (form.elements.prefix) form.elements.prefix.value = cm.prefix || "";
+    if (form.elements.fullName) form.elements.fullName.value = cm.fullName || "-";
+    if (form.elements.position) form.elements.position.value = cm.position || "-";
     setAddressFormValues(form, cm);
   } else {
     setupAddressSelects(document);
@@ -561,7 +567,7 @@ function renderDashboardContacts() {
     .map((item) => `
       <a class="${item.type}" href="tel:${item.phone}">
         <img src="${item.image || "./icon%20app.png"}" alt="" />
-        <span>${escapeHtml(item.name.replace("Case manager ", ""))}</span>
+        <span>${escapeHtml(item.name)}</span>
         <strong>${escapeHtml(item.phone)}</strong>
       </a>
     `)
@@ -572,7 +578,7 @@ function renderDashboardOps() {
   const container = document.querySelector("#dashboardOps");
   if (!container) return;
   const teams = [
-    ["Case Manager", 4, 6],
+    ["โรงพยาบาลในพื้นที่", 4, 6],
     ["SMI-V Team", 3, 5],
     ["MCATT", 2, 3],
     ["พยาบาล ER", 5, 8]
@@ -720,7 +726,7 @@ function showPatientDetail(patientCode) {
       ${detailItem("ที่อยู่", `${row.addressLine || "-"} ต.${row.subdistrict || "-"} อ.${row.district || "-"} จ.${row.province || "-"}`)}
       ${detailItem("พิกัด", row.latlng || "-")}
       ${detailItem("สถานะ", row.status || "-")}
-      ${detailItem("Case manager", cm ? `${cm.prefix}${cm.fullName} | ${cm.phone}` : "ไม่พบข้อมูล")}
+      ${detailItem("โรงพยาบาลในพื้นที่", cm ? `${cm.workplace} | โทร ${cm.phone}` : "ไม่พบข้อมูล")}
     </div>
     <h3>ข้อมูลผู้ดูแล</h3>
     <div class="caregiver-detail-list">
@@ -747,13 +753,11 @@ function renderCaseManagerTable() {
     ? caseManagers
         .map((cm) => `
           <tr>
-            <td><strong>${escapeHtml(cm.prefix || "")}${escapeHtml(cm.fullName || "")}</strong></td>
-            <td>${escapeHtml(cm.position || "-")}</td>
-            <td>${escapeHtml(cm.workplace || "-")}</td>
-            <td>${escapeHtml(cm.province || "-")} / ${escapeHtml(cm.district || "-")}</td>
+            <td><strong>${escapeHtml(cm.workplace || "-")}</strong></td>
+            <td>อ.${escapeHtml(cm.district || "-")}, จ.${escapeHtml(cm.province || "-")}</td>
             <td>${escapeHtml(cm.phone || "-")}</td>
-            <td>
-              <div class="row-actions">
+            <td style="text-align: right;">
+              <div class="row-actions" style="justify-content: flex-end;">
                 <button data-view-cm="${escapeHtml(cm.id)}" title="ดูรายละเอียด"><svg><use href="#i-eye"></use></svg></button>
                 <button data-edit-cm="${escapeHtml(cm.id)}" title="แก้ไข"><svg><use href="#i-edit"></use></svg></button>
                 <button data-delete-cm="${escapeHtml(cm.id)}" title="ลบ"><svg><use href="#i-trash"></use></svg></button>
@@ -762,7 +766,7 @@ function renderCaseManagerTable() {
           </tr>
         `)
         .join("")
-    : `<tr><td colspan="6"><div class="muted-box">ยังไม่มีข้อมูล Case manager</div></td></tr>`;
+    : `<tr><td colspan="4"><div class="muted-box">ยังไม่มีข้อมูลโรงพยาบาลในพื้นที่</div></td></tr>`;
 
   tbody.querySelectorAll("[data-view-cm]").forEach((button) => {
     button.addEventListener("click", () => showCaseManagerDetail(button.dataset.viewCm));
@@ -784,12 +788,13 @@ function showCaseManagerDetail(id) {
   const patients = patientCurrentRows().filter((patient) => patient.district === cm.district);
   showAdminDetail(`
     <div class="detail-summary teal">
-      <span class="detail-avatar">CM</span>
-      <h2>${escapeHtml(cm.prefix || "")}${escapeHtml(cm.fullName || "")}</h2>
-      <p>${escapeHtml(cm.position || "-")} | ${escapeHtml(cm.phone || "-")}</p>
+      <span class="detail-avatar">
+        <svg style="width: 2.5rem; height: 2.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+      </span>
+      <h2>${escapeHtml(cm.workplace || "ไม่มีชื่อโรงพยาบาล")}</h2>
+      <p>โทรศัพท์: ${escapeHtml(cm.phone || "-")}</p>
     </div>
     <div class="detail-grid-admin">
-      ${detailItem("สถานปฏิบัติงาน", cm.workplace)}
       ${detailItem("จังหวัด", cm.province)}
       ${detailItem("อำเภอรับผิดชอบ", cm.district)}
       ${detailItem("จำนวนผู้ป่วยในพื้นที่", `${patients.length} ราย`)}
@@ -808,7 +813,7 @@ function showCaseManagerDetail(id) {
 function deleteCaseManager(id) {
   const cm = storage.get("caseManagers", []).find((item) => item.id === id);
   if (!cm) return;
-  if (!confirm(`ลบข้อมูล Case manager ${cm.prefix || ""}${cm.fullName || ""}?`)) return;
+  if (!confirm(`ต้องการลบข้อมูลของ ${cm.workplace || "โรงพยาบาลนี้"} (อ.${cm.district || "-"}) ใช่หรือไม่?`)) return;
   storage.set("caseManagers", storage.get("caseManagers", []).filter((item) => item.id !== id));
   renderCaseManagerTable();
   renderDashboard();
@@ -830,7 +835,7 @@ function renderAdminPatientTable() {
               <td>${row.dischargeDate ? formatThaiDateTime(row.dischargeDate) : "-"}</td>
               <td><span class="risk-badge ${zoneClass(row.zone)}">${row.zone}</span><br><small>${row.score} คะแนน | ${formatThaiDateTime(row.updatedAt)}</small></td>
               <td>${escapeHtml(row.district || "-")}</td>
-              <td>${cm ? `${escapeHtml(cm.prefix || "")}${escapeHtml(cm.fullName || "")}` : "-"}</td>
+              <td>${cm ? `<span style="font-weight: 600; color: #0f766e;">${escapeHtml(cm.workplace || "")}</span><br><small>อ.${escapeHtml(cm.district || "")}</small>` : '<span class="muted">ไม่มีข้อมูล</span>'}</td>
               <td>
                 <div class="row-actions">
                   <button data-view-admin-patient="${escapeHtml(row.patientCode)}" title="ดูข้อมูล"><svg><use href="#i-eye"></use></svg></button>
