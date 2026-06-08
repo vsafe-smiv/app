@@ -12,9 +12,11 @@
     <link rel="apple-touch-icon" href="./icon%20app.png" />
     <link rel="stylesheet" href="./styles.css?v=13" />
     <style>
-      /* เพิ่ม CSS สำหรับจัดการคลังความรู้ 3x3 */
+      /* =========================================
+         CSS สำหรับจัดการคลังความรู้ 3x3
+         ========================================= */
       .knowledge-section {
-        padding: 0 1.25rem 2rem 1.25rem;
+        padding: 0 1.25rem 1.5rem 1.25rem;
       }
       .knowledge-title {
         font-size: 1.15rem;
@@ -36,31 +38,67 @@
         align-items: center;
         justify-content: center;
         text-decoration: none;
-        background: rgba(255, 255, 255, 0.95);
-        padding: 1rem 0.25rem;
-        border-radius: 1rem;
-        box-shadow: 0 4px 12px rgba(6, 43, 77, 0.05);
-        border: 1px solid var(--line);
+        background: #ffffff;
+        padding: 1.25rem 0.5rem; /* ปรับ Padding ให้ปุ่มดูเต็มและกว้างขึ้น */
+        border-radius: 1.25rem;
+        box-shadow: 0 6px 16px rgba(15, 118, 110, 0.06);
+        border: 1px solid rgba(15, 118, 110, 0.08);
         transition: all 0.2s ease;
         cursor: pointer;
       }
       .knowledge-icon-btn:hover, .knowledge-icon-btn:active {
         transform: translateY(-3px);
-        box-shadow: 0 6px 16px rgba(6, 43, 77, 0.1);
-        border-color: var(--teal);
+        box-shadow: 0 8px 20px rgba(15, 118, 110, 0.15);
+        border-color: #0f766e;
       }
       .knowledge-icon-btn img {
-        width: 3.5rem;
-        height: 3.5rem;
+        width: 4.8rem; /* ขยายภาพให้ใหญ่ขึ้นเต็มบล็อก */
+        height: 4.8rem;
         object-fit: contain;
-        margin-bottom: 0.5rem;
+        margin-bottom: 0.8rem;
       }
       .knowledge-icon-btn span {
-        font-size: 0.75rem;
-        font-weight: 500;
-        color: var(--navy);
+        font-size: 0.95rem; /* ขยายข้อความให้ใหญ่และอ่านง่ายขึ้น */
+        font-weight: 700;
+        color: #0f766e; /* ใช้สีเขียวมรกตให้เข้ากับแบนเนอร์ */
         text-align: center;
         line-height: 1.2;
+      }
+
+      /* =========================================
+         CSS สำหรับกล่อง UI Tip ท้ายหน้า (Footer)
+         ========================================= */
+      .footer-tip-container {
+        padding: 0 1.25rem 2rem 1.25rem;
+      }
+      .footer-tip-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f0fdfa 100%);
+        border: 1px solid rgba(15, 118, 110, 0.15);
+        border-radius: 1.25rem;
+        padding: 1.5rem 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        gap: 0.8rem;
+        box-shadow: 0 4px 15px rgba(15, 118, 110, 0.05);
+      }
+      .footer-tip-card img {
+        width: 4rem; /* ขนาดโลโก้ รพ. */
+        height: auto;
+        filter: drop-shadow(0 2px 5px rgba(0,0,0,0.1));
+      }
+      .footer-tip-card p {
+        margin: 0;
+        color: #0f766e;
+        font-size: 1rem;
+        font-weight: 600;
+        line-height: 1.5;
+      }
+      .footer-tip-card small {
+        color: #64748b;
+        font-size: 0.8rem;
+        font-weight: 400;
       }
     </style>
   </head>
@@ -347,47 +385,57 @@
           </div>
 
           <div class="knowledge-section">
-            <h3 class="knowledge-title">
-              <svg style="color: var(--teal); width: 1.4rem; height: 1.4rem;"><use href="#i-book"></use></svg> 
+            <h3 class="knowledge-title" style="padding-left: 1.25rem;">
+              <svg style="color: #0f766e; width: 1.4rem; height: 1.4rem;"><use href="#i-book"></use></svg> 
               คลังความรู้สำหรับผู้ดูแล
             </h3>
-            <div class="knowledge-grid">
-              <a href="#view-knowledge" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click() || true">
+            <div class="knowledge-grid" style="padding: 0 1.25rem;">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
                 <img src="./1.รู้โรค.png" alt="รู้โรค">
                 <span>รู้โรค</span>
               </a>
-              <a href="#view-knowledge" class="knowledge-icon-btn">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
                 <img src="./2.อารมณ์ดี.png" alt="อารมณ์ดี">
                 <span>อารมณ์ดี</span>
               </a>
-              <a href="#view-knowledge" class="knowledge-icon-btn">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
                 <img src="./3.คุยกัน.png" alt="คุยกัน">
                 <span>คุยกัน</span>
               </a>
-              <a href="#view-knowledge" class="knowledge-icon-btn">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
                 <img src="./4.กิจวัตร.png" alt="กิจวัตร">
                 <span>กิจวัตร</span>
               </a>
-              <a href="#view-knowledge" class="knowledge-icon-btn">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
                 <img src="./5.ปลอดยา.png" alt="ปลอดยา">
                 <span>ปลอดยา</span>
               </a>
-              <a href="#view-knowledge" class="knowledge-icon-btn">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
                 <img src="./6.ใจสบาย.png" alt="ใจสบาย">
                 <span>ใจสบาย</span>
               </a>
-              <a href="#view-knowledge" class="knowledge-icon-btn">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
                 <img src="./7.ตกลงกัน.png" alt="ตกลงกัน">
                 <span>ตกลงกัน</span>
               </a>
-              <a href="#view-knowledge" class="knowledge-icon-btn">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
                 <img src="./8.ปลอดภัย.png" alt="ปลอดภัย">
                 <span>ปลอดภัย</span>
               </a>
-              <a href="#view-knowledge" class="knowledge-icon-btn">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
                 <img src="./9.อยู่ร่วมกัน.png" alt="อยู่ร่วมกัน">
                 <span>อยู่ร่วมกัน</span>
               </a>
+            </div>
+          </div>
+
+          <div class="footer-tip-container">
+            <div class="footer-tip-card">
+              <img src="./nph logo.png" alt="NPH Logo">
+              <div>
+                <p>เพราะทุกคนคือคนสำคัญ <br>เราพร้อมอยู่เคียงข้างคุณในทุก ๆ วัน</p>
+                <small>โรงพยาบาลจิตเวชนครสวรรค์ราชนครินทร์</small>
+              </div>
             </div>
           </div>
 
