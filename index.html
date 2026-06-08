@@ -4,13 +4,65 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#06345c" />
-    <title>อุ่นใจ| Family App</title>
+    <title>อุ่นใจ | ระบบเฝ้าระวังและช่วยเหลือผู้ป่วยจิตเวชและครอบครัว</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon%20app.png" />
     <link rel="stylesheet" href="./styles.css?v=13" />
+    <style>
+      /* เพิ่ม CSS สำหรับจัดการคลังความรู้ 3x3 */
+      .knowledge-section {
+        padding: 0 1.25rem 2rem 1.25rem;
+      }
+      .knowledge-title {
+        font-size: 1.15rem;
+        color: var(--navy);
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+      }
+      .knowledge-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.75rem;
+      }
+      .knowledge-icon-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 1rem 0.25rem;
+        border-radius: 1rem;
+        box-shadow: 0 4px 12px rgba(6, 43, 77, 0.05);
+        border: 1px solid var(--line);
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+      .knowledge-icon-btn:hover, .knowledge-icon-btn:active {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(6, 43, 77, 0.1);
+        border-color: var(--teal);
+      }
+      .knowledge-icon-btn img {
+        width: 3.5rem;
+        height: 3.5rem;
+        object-fit: contain;
+        margin-bottom: 0.5rem;
+      }
+      .knowledge-icon-btn span {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--navy);
+        text-align: center;
+        line-height: 1.2;
+      }
+    </style>
   </head>
   <body class="app-body user-app">
     <div class="mobile-shell">
@@ -33,9 +85,9 @@
         <div class="brand-lockup">
           <img src="./icon%20app.png" alt="อุ่นใจ" class="brand-mark" />
           <div>
-            <p class="eyebrow"> </p>
+            <p class="eyebrow">ระบบเฝ้าระวังและช่วยเหลือ</p>
             <h1>อุ่นใจ</h1>
-            <p>ระบบเฝ้าระวังและช่วยเหลือผู้ป่วยจิตเวชและครอบครัว</p>
+            <p>ผู้ป่วยจิตเวชและครอบครัว</p>
           </div>
         </div>
         <div class="header-actions">
@@ -47,7 +99,7 @@
 
       <section id="authGate" class="auth-gate">
         <div class="cover-card">
-          <img src="./VSAFE.png" alt="V-SAFE ร่วมดูแลอย่างปลอดภัย" />
+          <img src="./VSAFE.png" alt="อุ่นใจ ร่วมดูแลอย่างปลอดภัย" />
           <div class="cover-actions">
             <button class="primary-btn wide" data-auth-mode="login" type="button"><svg class="btn-icon"><use href="#i-login"></use></svg>เข้าสู่ระบบ</button>
             <button class="secondary-btn wide" data-auth-mode="register" type="button"><svg class="btn-icon"><use href="#i-user-plus"></use></svg>ลงทะเบียน</button>
@@ -231,9 +283,10 @@
       </section>
 
       <main id="appMain" class="hidden">
+        
         <section id="view-home" class="view active">
+          
           <div class="hero-panel clean-home-hero" style="display: flex; flex-direction: column; gap: 1.5rem; padding-bottom: 1.5rem;">
-            
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
               <div class="hero-copy">
                 <div class="hero-brand-line" style="font-size: 1.8rem; color: var(--teal);">อุ่นใจ</div>
@@ -255,38 +308,53 @@
               </div>
               <div id="homePatientList" class="patient-list"></div>
             </div>
-
           </div>
 
-          <div class="zone-strip">
-
-          <div class="zone-strip">
-            <div class="zone-chip green"><b>Green</b><span>&lt; 7</span></div>
-            <div class="zone-chip yellow"><b>Yellow</b><span>7 - 13</span></div>
-            <div class="zone-chip red"><b>Red</b><span>&gt; 13</span></div>
-          </div>
-
-          <div class="service-flow compact-flow">
-            <article><span>1</span><strong>ประเมิน</strong><small>บันทึกอาการล่าสุด</small></article>
-            <article><span>2</span><strong>แปลผล</strong><small>Green / Yellow / Red</small></article>
-            <article><span>3</span><strong>เชื่อมต่อ</strong><small>ทีมสุขภาพในพื้นที่</small></article>
-          </div>
-
-          <article class="info-panel">
-            <h3>รอบการประเมิน</h3>
-            <div class="next-card">
-              <span>รอบถัดไป</span>
-              <strong id="nextAssessment">ยังไม่มีข้อมูล</strong>
+          <div class="knowledge-section">
+            <h3 class="knowledge-title">
+              <svg style="color: var(--teal); width: 1.4rem; height: 1.4rem;"><use href="#i-book"></use></svg> 
+              คลังความรู้สำหรับผู้ดูแล
+            </h3>
+            <div class="knowledge-grid">
+              <a href="#view-knowledge" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click() || true">
+                <img src="./1.รู้โรค.png" alt="รู้โรค">
+                <span>รู้โรค</span>
+              </a>
+              <a href="#view-knowledge" class="knowledge-icon-btn">
+                <img src="./2.อารมณ์ดี.png" alt="อารมณ์ดี">
+                <span>อารมณ์ดี</span>
+              </a>
+              <a href="#view-knowledge" class="knowledge-icon-btn">
+                <img src="./3.คุยกัน.png" alt="คุยกัน">
+                <span>คุยกัน</span>
+              </a>
+              <a href="#view-knowledge" class="knowledge-icon-btn">
+                <img src="./4.กิจวัตร.png" alt="กิจวัตร">
+                <span>กิจวัตร</span>
+              </a>
+              <a href="#view-knowledge" class="knowledge-icon-btn">
+                <img src="./5.ปลอดยา.png" alt="ปลอดยา">
+                <span>ปลอดยา</span>
+              </a>
+              <a href="#view-knowledge" class="knowledge-icon-btn">
+                <img src="./6.ใจสบาย.png" alt="ใจสบาย">
+                <span>ใจสบาย</span>
+              </a>
+              <a href="#view-knowledge" class="knowledge-icon-btn">
+                <img src="./7.ตกลงกัน.png" alt="ตกลงกัน">
+                <span>ตกลงกัน</span>
+              </a>
+              <a href="#view-knowledge" class="knowledge-icon-btn">
+                <img src="./8.ปลอดภัย.png" alt="ปลอดภัย">
+                <span>ปลอดภัย</span>
+              </a>
+              <a href="#view-knowledge" class="knowledge-icon-btn">
+                <img src="./9.อยู่ร่วมกัน.png" alt="อยู่ร่วมกัน">
+                <span>อยู่ร่วมกัน</span>
+              </a>
             </div>
-          </article>
-
-          <div class="hospital-band">
-            <img src="./nph%20logo.png" alt="โรงพยาบาลจิตเวชนครสวรรค์ราชนครินทร์" />
-            <div>
-              <strong>ER Psychiatric Monitoring Center</strong>
-              <span>รพ.จิตเวชนครสวรรค์ราชนครินทร์</span>
-            </div>
           </div>
+
         </section>
 
         <section id="view-register" class="view">
@@ -410,9 +478,11 @@
         <section id="view-knowledge" class="view">
           <div class="section-title">
             <p class="eyebrow">Caregiver Knowledge</p>
-            <h2>คลังความรู้</h2>
+            <h2>เนื้อหาคลังความรู้</h2>
           </div>
-          <div id="knowledgeList" class="knowledge-list"></div>
+          <div id="knowledgeList" class="knowledge-list muted-box">
+             อยู่ระหว่างการพัฒนาเนื้อหาโดยผู้ดูแลระบบ
+          </div>
         </section>
 
         <section id="view-help" class="view">
