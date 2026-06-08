@@ -103,7 +103,7 @@ const knowledgeItems = [
   ["การส่งเสริมการกินยา", "จัดกล่องยา ตั้งเตือน และสังเกตผลข้างเคียงเพื่อแจ้งทีมรักษา"],
   ["การจัดสิ่งแวดล้อมให้ปลอดภัย", "เก็บของมีคม แยกสิ่งกระตุ้น และเตรียมทางออกฉุกเฉิน"],
   ["การจัดการความเครียดของผู้ดูแล", "พักให้พอ ขอคนช่วยแบ่งเบา และใช้ช่องทางปรึกษาเมื่อเริ่มไม่ไหว"],
-  ["ความรู้เกี่ยวกับโรคและการดูแลต่อเนื่อง", "ติดตามนัด ประเมินซ้ำตามรอบ และสื่อสารกับ Case manager"]
+  ["ความรู้เกี่ยวกับโรคและการดูแลต่อเนื่อง", "ติดตามนัด ประเมินซ้ำตามรอบ และสื่อสารกับโรงพยาบาลในพื้นที่"]
 ];
 
 const zoneAdvice = {
@@ -425,8 +425,8 @@ function setupAddressSelects(scope = document) {
       if (!preview || !districtSelect.value) return;
       const cm = findCaseManager(districtSelect.value);
       preview.innerHTML = cm
-        ? `<strong>Case manager ประจำพื้นที่:</strong><br>${cm.prefix}${cm.fullName}<br>${cm.position || "Case manager"} | ${cm.workplace || ""}<br>โทร ${cm.phone}`
-        : "ยังไม่พบ Case manager ในอำเภอนี้";
+        ? `<strong>ติดต่อโรงพยาบาลในพื้นที่:</strong><br>${cm.workplace || "โรงพยาบาลประจำอำเภอ"}<br>${cm.prefix}${cm.fullName} | โทร ${cm.phone}`
+        : "ยังไม่พบข้อมูลโรงพยาบาลในพื้นที่สำหรับอำเภอนี้";
     };
 
     provinceSelect.addEventListener("change", refreshDistricts);
@@ -478,7 +478,7 @@ async function lookupPatientToPreview(inputSelector, previewSelector) {
     upsertPatient(patient);
   }
   if (!patient) {
-    preview.innerHTML = `<strong style="color: var(--red)">ไม่พบรหัสผู้ป่วยนี้</strong><br>กรุณาตรวจสอบกับพยาบาล case manager`;
+    preview.innerHTML = `<strong style="color: var(--red)">ไม่พบรหัสผู้ป่วยนี้</strong><br>กรุณาตรวจสอบกับโรงพยาบาลในพื้นที่`;
     return null;
   }
   preview.innerHTML = patientPreviewHtml(patient);
@@ -865,7 +865,7 @@ function renderPatientPanels() {
     form.classList.toggle("hidden", limitReached || form.classList.contains("hidden"));
     addButton?.classList.toggle("hidden", limitReached);
     if (limitReached && document.querySelector("#linkedPatientList")) {
-      document.querySelector("#linkedPatientList").insertAdjacentHTML("beforeend", `<div class="muted-box">เพิ่มผู้ป่วยครบ 3 คนแล้ว หากต้องการแก้ไขข้อมูลกรุณาติดต่อ Case manager</div>`);
+      document.querySelector("#linkedPatientList").insertAdjacentHTML("beforeend", `<div class="muted-box">เพิ่มผู้ป่วยครบ 3 คนแล้ว หากต้องการแก้ไขข้อมูลกรุณาติดต่อโรงพยาบาลในพื้นที่</div>`);
     }
   }
   renderPatientDetailPanel();
@@ -905,7 +905,7 @@ function renderPatientDetailPanel() {
       </div>
       <div class="detail-manager">
         <svg><use href="#i-nurse"></use></svg>
-        <span>${cm ? `${cm.prefix}${cm.fullName} | โทร ${cm.phone}` : "ยังไม่พบ Case manager"}</span>
+        <span>${cm ? `${cm.workplace || "โรงพยาบาลในพื้นที่"} | โทร ${cm.phone}` : "ยังไม่พบข้อมูลโรงพยาบาลในพื้นที่"}</span>
       </div>
     </article>
   `;
@@ -1071,7 +1071,7 @@ function showResultDialog(assessment) {
     : "";
 
   const emergency = assessment.zone === "RED"
-    ? `<a class="danger-btn wide" href="tel:${cm?.phone || "1669"}">SOS โทร Case manager ทันที</a>`
+    ? `<a class="danger-btn wide" href="tel:${cm?.phone || "1669"}">SOS โทรโรงพยาบาลในพื้นที่ ทันที</a>`
     : `<button class="secondary-btn" data-open-knowledge>เปิดคลังความรู้</button>`;
 
   content.innerHTML = `
@@ -1310,7 +1310,7 @@ function renderKnowledge() {
 
 function contactItems(cm) {
   return [
-    { type: "nurse", name: `Case manager ${cm ? cm.prefix + cm.fullName : "ประจำพื้นที่"}`, phone: cm?.phone || "056990888", image: "./nurse.png" },
+    { type: "nurse", name: cm ? cm.workplace || "โรงพยาบาลในพื้นที่" : "โรงพยาบาลในพื้นที่", phone: cm?.phone || "056990888", image: "./nurse.png" },
     { type: "ambulance", name: "ฉุกเฉิน 1669", phone: "1669", image: "./EMS.png" },
     { type: "police", name: "ตำรวจ 191", phone: "191", image: "./Police.png" },
     { type: "hospital", name: "รพ.จิตเวชนครสวรรค์ราชนครินทร์", phone: "056219444", image: "./nph%20logo.png" },
