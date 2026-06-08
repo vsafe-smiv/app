@@ -272,95 +272,104 @@
 
         <form id="registerAccountForm" class="auth-card register-wizard">
           <button class="auth-back" data-auth-back type="button">กลับ</button>
+          
           <div class="register-hero">
             <div>
               <h2>ลงทะเบียนผู้ดูแล</h2>
             </div>
           </div>
+          
           <div class="wizard-progress" aria-label="ขั้นตอนการลงทะเบียน">
-            <div class="active" data-step-dot="1"><span>1</span><strong>บัญชี</strong></div>
-            <div data-step-dot="2"><span>2</span><strong>ผู้ดูแล</strong></div>
-            <div data-step-dot="3"><span>3</span><strong>ผู้ป่วย</strong></div>
-            <div data-step-dot="4"><span>4</span><strong>พื้นที่</strong></div>
+            <div class="active" data-step-dot="1"><span>1</span><strong>ยินยอม</strong></div>
+            <div data-step-dot="2"><span>2</span><strong>บัญชี</strong></div>
+            <div data-step-dot="3"><span>3</span><strong>ผู้ดูแล</strong></div>
+            <div data-step-dot="4"><span>4</span><strong>ผู้ป่วย</strong></div>
+            <div data-step-dot="5"><span>5</span><strong>พื้นที่</strong></div>
           </div>
-
-          <div class="consent-wrapper">
-            <div class="consent-scrollbox">
-              <h3 style="text-align: center; color: #0f766e; margin-top: 0;">หนังสือแสดงความยินยอมการใช้งาน<br>V-SAFE Application<br><small style="font-weight: 400; color: #64748b;">(V-SAFE Application Consent Form)</small></h3>
-              
-              <p>V-SAFE Application เป็นระบบสนับสนุนการดูแลผู้ป่วยจิตเวชกลุ่มเสี่ยงสูงต่อการก่อความรุนแรง (Serious Mental Illness with High Risk to Violence: SMI-V) ที่พัฒนาขึ้นเพื่อส่งเสริมความรู้และทักษะของญาติผู้ดูแล สนับสนุนการเฝ้าระวังความเสี่ยง และเชื่อมโยงการเข้าถึงความช่วยเหลือด้านสุขภาพจิตอย่างทันท่วงที</p>
-          
-              <h4>1. วัตถุประสงค์ของการใช้งาน</h4>
-              <p>ระบบ V-SAFE มีวัตถุประสงค์เพื่อ</p>
-              <ul>
-                <li>สนับสนุนการดูแลผู้ป่วยจิตเวชในชุมชนอย่างต่อเนื่อง</li>
-                <li>ส่งเสริมความรู้และทักษะของญาติผู้ดูแลในการสังเกตอาการเตือนและการจัดการพฤติกรรมก้าวร้าวเบื้องต้น</li>
-                <li>สนับสนุนการเฝ้าระวังความเสี่ยงและการเข้าถึงความช่วยเหลือด้านสุขภาพจิต</li>
-                <li>เพิ่มความปลอดภัยของผู้ป่วย ครอบครัว และชุมชน</li>
-              </ul>
-          
-              <h4>2. ข้อมูลที่อาจมีการจัดเก็บในระบบ</h4>
-              <p>ข้อมูลที่บันทึกในระบบอาจประกอบด้วย</p>
-              <ul>
-                <li>ข้อมูลทั่วไปของผู้ป่วย</li>
-                <li>ข้อมูลของญาติหรือผู้ดูแล</li>
-                <li>ข้อมูลการติดตามอาการและพฤติกรรม</li>
-                <li>ข้อมูลการประเมินความเสี่ยงและสัญญาณเตือน</li>
-                <li>ข้อมูลการใช้บริการภายในระบบ</li>
-              </ul>
-          
-              <h4>3. การใช้ข้อมูล</h4>
-              <p>ข้อมูลที่ได้รับจะถูกนำไปใช้เพื่อ</p>
-              <ul>
-                <li>การดูแลรักษาและติดตามผู้ป่วย</li>
-                <li>การประสานงานระหว่างครอบครัว ชุมชน และทีมสุขภาพจิต</li>
-                <li>การพัฒนาคุณภาพระบบบริการสุขภาพจิต</li>
-                <li>การประเมินประสิทธิภาพของระบบ V-SAFE</li>
-              </ul>
-              <p>โดยจะไม่เปิดเผยข้อมูลแก่บุคคลภายนอกที่ไม่เกี่ยวข้อง เว้นแต่ได้รับความยินยอมจากเจ้าของข้อมูล หรือเป็นไปตามที่กฎหมายกำหนด</p>
-          
-              <h4>4. การคุ้มครองข้อมูลส่วนบุคคล</h4>
-              <p>ระบบ V-SAFE ให้ความสำคัญต่อการคุ้มครองข้อมูลส่วนบุคคลตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA)<br>ข้อมูลของท่านจะถูกจัดเก็บอย่างปลอดภัย และจำกัดสิทธิ์การเข้าถึงเฉพาะบุคลากรที่เกี่ยวข้องกับการดูแลผู้ป่วยตามความจำเป็นเท่านั้น</p>
-          
-              <h4>5. สิทธิของผู้ใช้งาน</h4>
-              <p>ท่านมีสิทธิ</p>
-              <ul>
-                <li>รับทราบรายละเอียดเกี่ยวกับการเก็บและใช้ข้อมูล</li>
-                <li>ขอแก้ไขข้อมูลที่ไม่ถูกต้อง</li>
-                <li>ถอนความยินยอมในการใช้งานระบบได้ทุกเมื่อ</li>
-              </ul>
-              <p>ทั้งนี้ การถอนความยินยอมอาจส่งผลให้ไม่สามารถใช้งานระบบ V-SAFE ได้ต่อไป</p>
-          
-              <h4>6. ข้อจำกัดของระบบ</h4>
-              <p>V-SAFE Application เป็นเครื่องมือสนับสนุนการให้ความรู้ การพัฒนาทักษะผู้ดูแล การเฝ้าระวังความเสี่ยง และการเชื่อมโยงความช่วยเหลือด้านสุขภาพจิต<br>ระบบนี้ไม่ใช่เครื่องมือวินิจฉัยโรค และไม่สามารถทดแทนการประเมิน การวินิจฉัย หรือการตัดสินใจทางการแพทย์โดยบุคลากรสุขภาพได้<br><strong>หากผู้ป่วยมีความเสี่ยงทำร้ายตนเอง ผู้อื่น หรือเกิดภาวะฉุกเฉิน ควรรีบติดต่อหน่วยบริการสุขภาพหรือหน่วยงานฉุกเฉินโดยทันที</strong></p>
-            </div>
-          
-            <div class="consent-checkbox-group">
-              <label class="custom-check-label">
-                <input type="checkbox" id="consentCheck1" class="consent-input">
-                <span>ข้าพเจ้าได้อ่านและเข้าใจรายละเอียดการใช้งาน V-SAFE Application รวมถึงการเก็บ ใช้ และคุ้มครองข้อมูลส่วนบุคคลแล้ว</span>
-              </label>
-              <label class="custom-check-label">
-                <input type="checkbox" id="consentCheck2" class="consent-input">
-                <span>ข้าพเจ้ายินยอมให้มีการเก็บและใช้ข้อมูลตามวัตถุประสงค์ที่กำหนด เพื่อประโยชน์ในการดูแลผู้ป่วยและการพัฒนาระบบบริการสุขภาพจิต</span>
-              </label>
-            </div>
-          
-            <div class="consent-radio-group">
-              <label class="custom-radio-label agree">
-                <input type="radio" name="consentRadio" value="agree" id="consentRadioAgree" class="consent-input">
-                <span>ยินยอมเข้าร่วมใช้งาน V-SAFE Application</span>
-              </label>
-              <label class="custom-radio-label disagree">
-                <input type="radio" name="consentRadio" value="disagree" id="consentRadioDisagree" class="consent-input">
-                <span>ไม่ยินยอมเข้าร่วมใช้งาน V-SAFE Application</span>
-              </label>
-            </div>
-          
-          </div>
-          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 1.5rem 0;">
 
           <div class="form-card auth-inner-card register-step active" data-register-step="1">
+            <div class="consent-wrapper">
+              
+              <div class="consent-scrollbox">
+                <h3 style="text-align: center; color: #0f766e; margin-top: 0;">หนังสือแสดงความยินยอมการใช้งาน<br>V-SAFE Application<br><small style="font-weight: 400; color: #64748b;">(V-SAFE Application Consent Form)</small></h3>
+                
+                <p>V-SAFE Application เป็นระบบสนับสนุนการดูแลผู้ป่วยจิตเวชกลุ่มเสี่ยงสูงต่อการก่อความรุนแรง (Serious Mental Illness with High Risk to Violence: SMI-V) ที่พัฒนาขึ้นเพื่อส่งเสริมความรู้และทักษะของญาติผู้ดูแล สนับสนุนการเฝ้าระวังความเสี่ยง และเชื่อมโยงการเข้าถึงความช่วยเหลือด้านสุขภาพจิตอย่างทันท่วงที</p>
+            
+                <h4>1. วัตถุประสงค์ของการใช้งาน</h4>
+                <p>ระบบ V-SAFE มีวัตถุประสงค์เพื่อ</p>
+                <ul>
+                  <li>สนับสนุนการดูแลผู้ป่วยจิตเวชในชุมชนอย่างต่อเนื่อง</li>
+                  <li>ส่งเสริมความรู้และทักษะของญาติผู้ดูแลในการสังเกตอาการเตือนและการจัดการพฤติกรรมก้าวร้าวเบื้องต้น</li>
+                  <li>สนับสนุนการเฝ้าระวังความเสี่ยงและการเข้าถึงความช่วยเหลือด้านสุขภาพจิต</li>
+                  <li>เพิ่มความปลอดภัยของผู้ป่วย ครอบครัว และชุมชน</li>
+                </ul>
+            
+                <h4>2. ข้อมูลที่อาจมีการจัดเก็บในระบบ</h4>
+                <p>ข้อมูลที่บันทึกในระบบอาจประกอบด้วย</p>
+                <ul>
+                  <li>ข้อมูลทั่วไปของผู้ป่วย</li>
+                  <li>ข้อมูลของญาติหรือผู้ดูแล</li>
+                  <li>ข้อมูลการติดตามอาการและพฤติกรรม</li>
+                  <li>ข้อมูลการประเมินความเสี่ยงและสัญญาณเตือน</li>
+                  <li>ข้อมูลการใช้บริการภายในระบบ</li>
+                </ul>
+            
+                <h4>3. การใช้ข้อมูล</h4>
+                <p>ข้อมูลที่ได้รับจะถูกนำไปใช้เพื่อ</p>
+                <ul>
+                  <li>การดูแลรักษาและติดตามผู้ป่วย</li>
+                  <li>การประสานงานระหว่างครอบครัว ชุมชน และทีมสุขภาพจิต</li>
+                  <li>การพัฒนาคุณภาพระบบบริการสุขภาพจิต</li>
+                  <li>การประเมินประสิทธิภาพของระบบ V-SAFE</li>
+                </ul>
+                <p>โดยจะไม่เปิดเผยข้อมูลแก่บุคคลภายนอกที่ไม่เกี่ยวข้อง เว้นแต่ได้รับความยินยอมจากเจ้าของข้อมูล หรือเป็นไปตามที่กฎหมายกำหนด</p>
+            
+                <h4>4. การคุ้มครองข้อมูลส่วนบุคคล</h4>
+                <p>ระบบ V-SAFE ให้ความสำคัญต่อการคุ้มครองข้อมูลส่วนบุคคลตามพระราชบัญญัติคุ้มครองข้อมูลส่วนบุคคล พ.ศ. 2562 (PDPA)<br>ข้อมูลของท่านจะถูกจัดเก็บอย่างปลอดภัย และจำกัดสิทธิ์การเข้าถึงเฉพาะบุคลากรที่เกี่ยวข้องกับการดูแลผู้ป่วยตามความจำเป็นเท่านั้น</p>
+            
+                <h4>5. สิทธิของผู้ใช้งาน</h4>
+                <p>ท่านมีสิทธิ</p>
+                <ul>
+                  <li>รับทราบรายละเอียดเกี่ยวกับการเก็บและใช้ข้อมูล</li>
+                  <li>ขอแก้ไขข้อมูลที่ไม่ถูกต้อง</li>
+                  <li>ถอนความยินยอมในการใช้งานระบบได้ทุกเมื่อ</li>
+                </ul>
+                <p>ทั้งนี้ การถอนความยินยอมอาจส่งผลให้ไม่สามารถใช้งานระบบ V-SAFE ได้ต่อไป</p>
+            
+                <h4>6. ข้อจำกัดของระบบ</h4>
+                <p>V-SAFE Application เป็นเครื่องมือสนับสนุนการให้ความรู้ การพัฒนาทักษะผู้ดูแล การเฝ้าระวังความเสี่ยง และการเชื่อมโยงความช่วยเหลือด้านสุขภาพจิต<br>ระบบนี้ไม่ใช่เครื่องมือวินิจฉัยโรค และไม่สามารถทดแทนการประเมิน การวินิจฉัย หรือการตัดสินใจทางการแพทย์โดยบุคลากรสุขภาพได้<br><strong>หากผู้ป่วยมีความเสี่ยงทำร้ายตนเอง ผู้อื่น หรือเกิดภาวะฉุกเฉิน ควรรีบติดต่อหน่วยบริการสุขภาพหรือหน่วยงานฉุกเฉินโดยทันที</strong></p>
+              </div>
+            
+              <div class="consent-checkbox-group">
+                <label class="custom-check-label">
+                  <input type="checkbox" id="consentCheck1" class="consent-input">
+                  <span>ข้าพเจ้าได้อ่านและเข้าใจรายละเอียดการใช้งาน V-SAFE Application รวมถึงการเก็บ ใช้ และคุ้มครองข้อมูลส่วนบุคคลแล้ว</span>
+                </label>
+                <label class="custom-check-label">
+                  <input type="checkbox" id="consentCheck2" class="consent-input">
+                  <span>ข้าพเจ้ายินยอมให้มีการเก็บและใช้ข้อมูลตามวัตถุประสงค์ที่กำหนด เพื่อประโยชน์ในการดูแลผู้ป่วยและการพัฒนาระบบบริการสุขภาพจิต</span>
+                </label>
+              </div>
+            
+              <div class="consent-radio-group">
+                <label class="custom-radio-label agree">
+                  <input type="radio" name="consentRadio" value="agree" id="consentRadioAgree" class="consent-input">
+                  <span>ยินยอมเข้าร่วมใช้งาน V-SAFE Application</span>
+                </label>
+                <label class="custom-radio-label disagree">
+                  <input type="radio" name="consentRadio" value="disagree" id="consentRadioDisagree" class="consent-input">
+                  <span>ไม่ยินยอมเข้าร่วมใช้งาน V-SAFE Application</span>
+                </label>
+              </div>
+            
+            </div>
+            
+            <div class="wizard-actions single" style="margin-top: 1rem;">
+              <button class="primary-btn wide" data-register-next id="step1NextBtn" disabled type="button">ถัดไป</button>
+            </div>
+          </div>
+
+          <div class="form-card auth-inner-card register-step" data-register-step="2">
             <h3>สร้างบัญชีผู้ดูแล</h3>
             <input name="authProvider" type="hidden" value="password" />
             <div class="social-signup" aria-label="สร้างบัญชีด้วยบัญชีภายนอก">
@@ -381,12 +390,13 @@
                 <input name="confirmPassword" type="password" autocomplete="new-password" minlength="4" required />
               </label>
             </div>
-            <div class="wizard-actions single">
-              <button class="primary-btn wide" data-register-next type="button">ถัดไป</button>
+            <div class="wizard-actions">
+              <button class="secondary-btn" data-register-prev type="button">ย้อนกลับ</button>
+              <button class="primary-btn" data-register-next type="button">ถัดไป</button>
             </div>
           </div>
 
-          <div class="form-card auth-inner-card register-step" data-register-step="2">
+          <div class="form-card auth-inner-card register-step" data-register-step="3">
             <h3>ข้อมูลผู้ดูแล</h3>
             <div class="field-grid two">
               <label>คำนำหน้า
@@ -430,7 +440,7 @@
             </div>
           </div>
 
-          <div class="form-card auth-inner-card register-step" data-register-step="3">
+          <div class="form-card auth-inner-card register-step" data-register-step="4">
             <h3>ข้อมูลผู้ป่วย</h3>
             <label>รหัสผู้ป่วย
               <input id="authPatientCodeLookup" name="patientCode" placeholder="กรอกรหัสผู้ป่วย" />
@@ -468,7 +478,7 @@
             </div>
           </div>
 
-          <div class="form-card auth-inner-card register-step" data-register-step="4">
+          <div class="form-card auth-inner-card register-step" data-register-step="5">
             <h3>ข้อมูลที่อยู่และพื้นที่บริการ</h3>
             <div class="field-grid two">
               <label>จังหวัด
