@@ -643,7 +643,7 @@ function applySocialSignup(provider) {
 }
 
 function setRegisterStep(step) {
-  const nextStep = Math.min(4, Math.max(1, step));
+  const nextStep = Math.min(5, Math.max(1, step)); // ปรับขีดจำกัดจาก 4 เป็น 5 สเต็ป
   document.querySelectorAll(".register-step").forEach((panel) => {
     panel.classList.toggle("active", Number(panel.dataset.registerStep) === nextStep);
   });
@@ -665,7 +665,9 @@ async function validateRegisterStep(step) {
       return false;
     }
   }
-  if (step === 1) {
+  
+  // เลื่อนการตรวจสอบข้อมูลบัญชี จากสเตป 1 เดิม มาอยู่ที่สเตป 2 ใหม่
+  if (step === 2) {
     const payload = Object.fromEntries(new FormData(form).entries());
     if (payload.password !== payload.confirmPassword) {
       alert("Password และยืนยัน Password ไม่ตรงกัน");
@@ -676,7 +678,9 @@ async function validateRegisterStep(step) {
       return false;
     }
   }
-  if (step === 3) {
+  
+  // เลื่อนการตรวจสอบการเลือกผู้ป่วย จากสเตป 3 เดิม มาอยู่ที่สเตป 4 ใหม่
+  if (step === 4) {
     if (!registerDraftPatients.length) await addDraftPatientFromInput();
     if (!registerDraftPatients.length) {
       alert("กรุณาเพิ่มผู้ป่วยอย่างน้อย 1 คน");
