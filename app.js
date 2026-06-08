@@ -1200,14 +1200,22 @@ function renderHomeNextAssessment() {
       countdownTarget.textContent = `อีก ${diffDays} วัน`;
       countdownTarget.style.color = "#64748b"; // สีเทาปกติ
       dateTarget.style.color = "#0f766e"; // สีเขียวหลัก
-    } else if (diffDays === 0) {
-      countdownTarget.textContent = "ครบกำหนดวันนี้!";
-      countdownTarget.style.color = "#f59e0b"; // สีเหลืองเตือน
-      dateTarget.style.color = "#f59e0b";
     } else {
-      countdownTarget.textContent = `เกินกำหนด ${Math.abs(diffDays)} วัน!`;
-      countdownTarget.style.color = "#ef4444"; // สีแดงอันตราย
-      dateTarget.style.color = "#ef4444";
+      // กรณีถึงวันครบกำหนด (0) หรือเกินกำหนด (ติดลบ)
+      if (diffDays === 0) {
+        countdownTarget.textContent = "ครบกำหนดวันนี้!";
+        countdownTarget.style.color = "#f59e0b"; // สีเหลืองเตือน
+        dateTarget.style.color = "#f59e0b";
+      } else {
+        countdownTarget.textContent = `เกินกำหนด ${Math.abs(diffDays)} วัน!`;
+        countdownTarget.style.color = "#ef4444"; // สีแดงอันตราย
+        dateTarget.style.color = "#ef4444";
+      }
+      
+      // เรียกฟังก์ชันแสดง Pop-up แจ้งเตือนให้ประเมิน (เรียกแค่กรณีที่ถึงกำหนดหรือเกินกำหนด)
+      if (typeof checkAndShowDuePopup === "function") {
+        checkAndShowDuePopup(active);
+      }
     }
   }
 }
