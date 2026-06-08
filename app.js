@@ -461,9 +461,9 @@ function escapeHtml(value = "") {
 
 function patientPreviewHtml(patient) {
   return `
-    <strong>${patient.prefix}${patient.fullName}</strong><br>
-    HN ${patient.hn} | ${patient.gender} | อายุ ${calculateAge(patient.dob)} ปี<br>
-    Dx: ${patient.dx} | จำหน่าย ${formatThaiDateTime(patient.dischargeDate)}
+    <strong>รหัส: ${escapeHtml(patient.patientCode)}</strong><br>
+    HN ${escapeHtml(patient.hn)} | ${escapeHtml(patient.gender)} | อายุ ${calculateAge(patient.dob)} ปี<br>
+    Dx: ${escapeHtml(patient.dx)} | จำหน่าย ${formatThaiDateTime(patient.dischargeDate)}
   `;
 }
 
@@ -715,7 +715,7 @@ function renderDraftPatients() {
           (patient, index) => `
             <div class="patient-mini">
               <span>${index + 1}</span>
-              <strong>${escapeHtml(patient.hn)} ${escapeHtml(patient.prefix || "")}${escapeHtml(patient.fullName || "")}</strong>
+              <strong>HN ${escapeHtml(patient.hn)} | รหัส ${escapeHtml(patient.patientCode)}</strong>
               <button type="button" data-remove-draft-patient="${escapeHtml(patient.patientCode)}">ลบ</button>
             </div>
           `
@@ -768,7 +768,53 @@ function renderPatientPanels() {
   if (!linked.some((patient) => patient.patientCode === selectedPatientDetailCode)) {
     selectedPatientDetailCode = null;
   }
-  const html = linked.length
+
+  // --- HTML สำหรับหน้าแรก (Glassmorphism, โชว์แค่ รหัส/HN/พื้นที่/สถานะ) ---
+  const homeHtml = linked.length
+    ? linked
+        .map((patient, index) => {
+          const score = Number(patient.lastScore ?? patient.baselineScore ?? 0);
+          const zone = patient.lastZone || classifyRisk(score);
+          const isActive = active?.patientCode === patient.patientCode;
+          
+          // กำหนดสี Badge ตามสถานะความเสี่ยง
+          let statusColor = "#34c759"; // เขียว (Green)
+          if (zone === "YELLOW") statusColor = "#f59e0b"; // เหลืองทอง (Yellow)
+          if (zone === "RED") statusColor = "#ff3b30"; // แดง (Red)
+
+          return `
+            <div data-active-patient="${escapeHtml(patient.patientCode)}" style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 0; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.1); ${isActive ? 'opacity: 1;' : 'opacity: 0.75;'} transition: opacity 0.2s;">
+              
+              <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                <div style="font-size: 1.15rem; font-weight: 700; color: white; letter-spacing: 0.5px;">
+                  รหัส: ${escapeHtml(patient.patientCode)}
+                </div>
+                <div style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.85);">
+                  HN ${escapeHtml(patient.hn)}
+                </div>
+                <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.7); display: flex; align-items: center; gap: 0.3rem; margin-top: 0.1rem;">
+                  <svg style="width: 0.9rem; height: 0.9rem; opacity: 0.8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                  ${escapeHtml(patient.district)}, ${escapeHtml(patient.province)}
+                </div>
+              </div>
+              
+              <div style="background: ${statusColor}; padding: 0.5rem 0.75rem; border-radius: 0.75rem; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.15); min-width: 4.8rem;">
+                <div style="font-size: 1rem; font-weight: 800; color: white; line-height: 1; text-transform: uppercase;">
+                  ${zone}
+                </div>
+                <div style="font-size: 0.65rem; font-weight: 500; color: rgba(255,255,255,0.95); margin-top: 0.25rem;">
+                  ${score} คะแนน
+                </div>
+              </div>
+
+            </div>
+          `;
+        })
+        .join("")
+    : `<div style="color: rgba(255,255,255,0.7); text-align: center; padding: 1rem;">ยังไม่มีผู้ป่วยในบัญชีนี้</div>`;
+
+  // --- HTML สำหรับหน้าจัดการผู้ป่วย (ซ่อนชื่อผู้ป่วยเช่นกัน) ---
+  const linkedHtml = linked.length
     ? linked
         .map((patient, index) => {
           const score = Number(patient.lastScore ?? patient.baselineScore ?? 0);
@@ -777,7 +823,7 @@ function renderPatientPanels() {
           return `
             <button class="patient-card ${isActive ? "active" : ""}" data-active-patient="${escapeHtml(patient.patientCode)}" type="button">
               <span class="patient-number">${index + 1}</span>
-              <strong>${escapeHtml(patient.prefix || "")}${escapeHtml(patient.fullName || "")}</strong>
+              <strong>รหัส: ${escapeHtml(patient.patientCode)}</strong>
               <small>HN ${escapeHtml(patient.hn)} | ${escapeHtml(patient.district)}</small>
               <em class="${zoneClass(zone)}">${zone} ${score} คะแนน</em>
             </button>
@@ -786,19 +832,31 @@ function renderPatientPanels() {
         .join("")
     : `<div class="muted-box">ยังไม่มีผู้ป่วยในบัญชีนี้</div>`;
 
-  document.querySelectorAll("#homePatientList, #linkedPatientList").forEach((container) => {
-    container.innerHTML = html;
-    container.querySelectorAll("[data-active-patient]").forEach((button) => {
+  // ใส่ข้อมูลลงในหน้าแรก (Home)
+  const homeContainer = document.querySelector("#homePatientList");
+  if (homeContainer) {
+    homeContainer.innerHTML = homeHtml;
+    const lastItem = homeContainer.lastElementChild;
+    if(lastItem && lastItem.tagName === "DIV") lastItem.style.borderBottom = "none";
+    
+    homeContainer.querySelectorAll("[data-active-patient]").forEach((button) => {
+      button.addEventListener("click", () => setActivePatient(button.dataset.activePatient));
+    });
+  }
+
+  // ใส่ข้อมูลลงในหน้าจัดการผู้ป่วย (Register/Linked)
+  const linkedContainer = document.querySelector("#linkedPatientList");
+  if (linkedContainer) {
+    linkedContainer.innerHTML = linkedHtml;
+    linkedContainer.querySelectorAll("[data-active-patient]").forEach((button) => {
       button.addEventListener("click", () => {
-        if (container.id === "linkedPatientList") selectedPatientDetailCode = button.dataset.activePatient;
+        selectedPatientDetailCode = button.dataset.activePatient;
         setActivePatient(button.dataset.activePatient);
-        if (container.id === "linkedPatientList") {
-          document.querySelector("#caregiverForm")?.classList.add("hidden");
-          renderPatientDetailPanel();
-        }
+        document.querySelector("#caregiverForm")?.classList.add("hidden");
+        renderPatientDetailPanel();
       });
     });
-  });
+  }
 
   const form = document.querySelector("#caregiverForm");
   const addButton = document.querySelector("#showAddPatientForm");
@@ -834,7 +892,7 @@ function renderPatientDetailPanel() {
       <div class="detail-head">
         <span class="detail-icon"><svg><use href="#i-shield"></use></svg></span>
         <div>
-          <strong>${escapeHtml(patient.prefix || "")}${escapeHtml(patient.fullName || "")}</strong>
+          <strong>รหัส: ${escapeHtml(patient.patientCode)}</strong>
           <small>HN ${escapeHtml(patient.hn)} | Dx ${escapeHtml(patient.dx || "-")}</small>
         </div>
         <em>${zone}</em>
@@ -859,7 +917,7 @@ function renderAssessmentPatientOptions() {
   const linked = getLinkedPatients();
   const active = getActivePatient();
   select.innerHTML = linked.length
-    ? linked.map((patient) => `<option value="${escapeHtml(patient.patientCode)}">${escapeHtml(patient.hn)} - ${escapeHtml(patient.prefix || "")}${escapeHtml(patient.fullName || "")}</option>`).join("")
+    ? linked.map((patient) => `<option value="${escapeHtml(patient.patientCode)}">HN ${escapeHtml(patient.hn)} - รหัส ${escapeHtml(patient.patientCode)}</option>`).join("")
     : `<option value="">ยังไม่มีผู้ป่วยในบัญชีนี้</option>`;
   if (active) select.value = active.patientCode;
 }
