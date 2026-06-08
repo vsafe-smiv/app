@@ -1117,7 +1117,7 @@ function showResultDialog(assessment) {
   
   dialog.showModal();
 }
-// ฟังก์ชันสลับการแสดงผลคลังความรู้ 9 รายการ แยกตามกลุ่มเสี่ยงของระบบแอดมิน
+// ฟังก์ชันสลับการแสดงผลคลังความรู้ 9 รายการ (แก้ไขจุดพิมพ์ผิดเรียบร้อย)
 function filterKnowledgeByZone(zone) {
   const knowledgeGrids = document.querySelectorAll(".knowledge-grid");
   if (!knowledgeGrids.length) return;
@@ -1126,22 +1126,22 @@ function filterKnowledgeByZone(zone) {
     const items = grid.querySelectorAll(".knowledge-icon-btn");
     items.forEach((item) => {
       const text = item.querySelector("span")?.textContent?.trim() || "";
-      let itemZone = "GREEN"; // ค่าเริ่มต้น
+      let itemZone = "GREEN"; 
 
-      // ลอจิกแยกแยะหัวข้อความรู้ประจำกลุ่มเสี่ยง (แอดมินกำหนดตามชื่อรายการ)
+      // ลอจิกแยกแยะหัวข้อความรู้ประจำกลุ่มเสี่ยง
       if (["รู้โรค", "อารมณ์ดี", "คุยกัน"].includes(text)) {
-        itemZone = "GREEN";   // กลุ่มความรู้สำหรับเสี่ยงต่ำ
+        itemZone = "GREEN";   
       } else if (["กิจวัตร", "ปลอดยา", "ใจสบาย"].includes(text)) {
-        itemZone = "YELLOW";  // กลุ่มความรู้สำหรับเสี่ยงปานกลาง
+        itemZone = "YELLOW";  
       } else if (["ตกลงกัน", "ปลอดภัย", "อยู่ร่วมกัน"].includes(text)) {
-        itemZone = "RED";     // กลุ่มความรู้สำหรับเสี่ยงสูง
+        itemZone = "RED";     
       }
 
-      // ตรวจสอบเงื่อนไขตัวกรอง หากระบุ zone ตรงกัน ให้แสดงผล หากไม่ตรงให้ซ่อนไว้
+      // หากค่า zone เป็น null หรือตรงกับกลุ่มเสี่ยง ให้แสดงผลตามปกติ
       if (!zone || itemZone === zone) {
-        item.style.style.setProperty("display", "flex", "important");
+        item.style.setProperty("display", "flex", "important");
       } else {
-        item.style.style.setProperty("display", "none", "important");
+        item.style.setProperty("display", "none", "important");
       }
     });
   });
@@ -1465,4 +1465,18 @@ function initConsentLogic() {
 }
 document.addEventListener("DOMContentLoaded", () => {
   initConsentLogic(); // เรียกใช้งานระบบ Consent
+});
+// ระบบเคลียร์ตัวกรองคลังความรู้เมื่อกดจากแถบเมนูด้านล่าง
+document.addEventListener("DOMContentLoaded", () => {
+  // ค้นหาปุ่มบนแถบเมนูด้านล่างที่มีคำสั่งสลับหน้าไปยังคลังความรู้ (data-nav="knowledge")
+  const knowledgeTabBtn = document.querySelector('[data-nav="knowledge"]');
+  
+  if (knowledgeTabBtn) {
+    knowledgeTabBtn.addEventListener("click", () => {
+      // เรียกฟังก์ชันกรองความรู้โดยส่งค่า null เพื่อล้างตัวกรองและแสดงผลทั้งหมด 9 รายการ
+      if (typeof filterKnowledgeByZone === "function") {
+        filterKnowledgeByZone(null);
+      }
+    });
+  }
 });
