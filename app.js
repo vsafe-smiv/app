@@ -1065,43 +1065,86 @@ function initAssessmentForm() {
 
 function showResultDialog(assessment) {
   const dialog = document.querySelector("#resultDialog");
-  const content = document.querySelector("#resultContent");
-  const advice = zoneAdvice[assessment.zone];
-  const cm = findCaseManager(assessment.district);
-  if (!dialog || !content) return;
+  if (!dialog) return;
 
-  const extra = assessment.zone === "YELLOW"
-    ? `<h3>สิ่งที่ผู้ดูแลควรสังเกตเพิ่มเติม</h3><ul class="advice-list">${advice.observe.map((item) => `<li>${item}</li>`).join("")}</ul>`
-    : "";
+  const activePatient = getActivePatient();
+  const cm = (activePatient && typeof findCaseManager === "function") ? findCaseManager(activePatient.district) : null;
 
-  const emergency = assessment.zone === "RED"
-    ? `<a class="danger-btn wide" href="tel:${cm?.phone || "1669"}">SOS โทรโรงพยาบาลในพื้นที่ ทันที</a>`
-    : `<button class="secondary-btn" data-open-knowledge>เปิดคลังความรู้</button>`;
+  let riskLevelName = "ต่ำ";
+  let zoneColor = "#4cd964"; // สีเขียวสำหรับเสี่ยงต่ำ
+  
+  if (assessment.zone === "YELLOW") {
+    riskLevelName = "ปานกลาง";
+    zoneColor = "#f59e0b"; // สีส้มสำหรับเสี่ยงปานกลาง
+  } else if (assessment.zone === "RED") {
+    riskLevelName = "สูง";
+    zoneColor = "#ef4444"; // สีแดงสำหรับเสี่ยงสูง
+  }
 
-  content.innerHTML = `
-    <div class="result-header ${zoneClass(assessment.zone)}">
-      <p>${advice.label} | คะแนน ${assessment.score}</p>
-      <h2>${advice.title}</h2>
-      <span>${advice.description}</span>
-    </div>
-    <h3>คำแนะนำสำหรับผู้ดูแล</h3>
-    <ul class="advice-list">${advice.steps.map((item) => `<li>${item}</li>`).join("")}</ul>
-    ${extra}
-    <div class="contact-list">
-      ${contactItems(cm).map(contactHtml).join("")}
-    </div>
-    <div class="dialog-actions ${assessment.zone === "RED" ? "single" : ""}">
-      ${emergency}
-      <button class="primary-btn" data-close-dialog>รับทราบ</button>
+  // 1. สร้างบล็อกคลังความรู้แยกตามกลุ่มเสี่ยง (ต่ำ, ปานกลาง, สูง) เพื่อแสดงก่อนเบอร์ติดต่อ
+  const knowledgeBlockHtml = `
+    <div onclick="if(typeof filterKnowledgeByZone === 'function') filterKnowledgeByZone('${assessment.zone}'); document.querySelector('[data-nav=\\'knowledge\\']')?.click(); document.querySelector('#resultDialog')?.close();" 
+         style="background: #f0fdfa; border: 1px solid #0f766e; border-radius: 1rem; padding: 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; box-shadow: 0 4px 12px rgba(15, 118, 110, 0.05); text-align: left; transition: transform 0.2s;">
+      <div style="background: #0f766e; color: white; width: 2.2rem; height: 2.2rem; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+        <svg style="width: 1.2rem; height: 1.2rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+      </div>
+      <div style="flex: 1;">
+        <span style="font-weight: 700; color: #0f766e; font-size: 0.95rem; display: block;">คลังความรู้สำหรับผู้ป่วยกลุ่มเสี่ยง${riskLevelName}</span>
+        <span style="font-size: 0.8rem; color: #64748b;">แนะนำวิธีการดูแลเฉพาะกลุ่มเสี่ยงนี้</span>
+      </div>
+      <svg style="width: 1.1rem; height: 1.1rem; color: #0f766e;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path></svg>
     </div>
   `;
 
-  content.querySelector("[data-close-dialog]")?.addEventListener("click", () => dialog.close());
-  content.querySelector("[data-open-knowledge]")?.addEventListener("click", () => {
-    dialog.close();
-    document.querySelector('[data-nav="knowledge"]')?.click();
-  });
+  // 2. ส่วนปุ่มดำเนินการหลักด้านล่าง (ถอดปุ่มเปิดคลังความรู้เดิมออกแล้ว)
+  const actionButtonHtml = assessment.zone === "RED"
+    ? `<a class="danger-btn wide" href="tel:${cm?.phone || "1669"}" style="display: block; text-align: center; background: #ef4444; color: white; padding: 0.85rem; border-radius: 1rem; font-weight: 700; text-decoration: none; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); font-size: 1rem;">SOS โทรโรงพยาบาลในพื้นที่ ทันที</a>`
+    : `<button class="secondary-btn wide" onclick="document.querySelector('#resultDialog')?.close();" style="width: 100%; padding: 0.85rem; border-radius: 1rem; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569; font-weight: 700; font-size: 1rem; cursor: pointer;">รับทราบ</button>`;
+
+  dialog.innerHTML = `
+    <div style="padding: 1.5rem 1.25rem; text-align: center;">
+      <div style="width: 4rem; height: 4rem; background: ${zoneColor}15; color: ${zoneColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem;">
+        <svg style="width: 2.2rem; height: 2.2rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+      </div>
+      <h2 style="margin: 0 0 0.4rem; font-size: 1.35rem; color: #1e293b; font-weight: 700;">บันทึกผลประเมินเรียบร้อย</h2>
+      <p style="margin: 0 0 1.5rem; color: #64748b; font-size: 0.95rem;">ผลการประเมินล่าสุดอยู่ในกลุ่ม: <strong style="color: ${zoneColor}; font-weight: 700;">เสี่ยง${riskLevelName}</strong></p>
+      
+      ${knowledgeBlockHtml}
+      
+      ${actionButtonHtml}
+    </div>
+  `;
+  
   dialog.showModal();
+}
+// ฟังก์ชันสลับการแสดงผลคลังความรู้ 9 รายการ แยกตามกลุ่มเสี่ยงของระบบแอดมิน
+function filterKnowledgeByZone(zone) {
+  const knowledgeGrids = document.querySelectorAll(".knowledge-grid");
+  if (!knowledgeGrids.length) return;
+
+  knowledgeGrids.forEach((grid) => {
+    const items = grid.querySelectorAll(".knowledge-icon-btn");
+    items.forEach((item) => {
+      const text = item.querySelector("span")?.textContent?.trim() || "";
+      let itemZone = "GREEN"; // ค่าเริ่มต้น
+
+      // ลอจิกแยกแยะหัวข้อความรู้ประจำกลุ่มเสี่ยง (แอดมินกำหนดตามชื่อรายการ)
+      if (["รู้โรค", "อารมณ์ดี", "คุยกัน"].includes(text)) {
+        itemZone = "GREEN";   // กลุ่มความรู้สำหรับเสี่ยงต่ำ
+      } else if (["กิจวัตร", "ปลอดยา", "ใจสบาย"].includes(text)) {
+        itemZone = "YELLOW";  // กลุ่มความรู้สำหรับเสี่ยงปานกลาง
+      } else if (["ตกลงกัน", "ปลอดภัย", "อยู่ร่วมกัน"].includes(text)) {
+        itemZone = "RED";     // กลุ่มความรู้สำหรับเสี่ยงสูง
+      }
+
+      // ตรวจสอบเงื่อนไขตัวกรอง หากระบุ zone ตรงกัน ให้แสดงผล หากไม่ตรงให้ซ่อนไว้
+      if (!zone || itemZone === zone) {
+        item.style.style.setProperty("display", "flex", "important");
+      } else {
+        item.style.style.setProperty("display", "none", "important");
+      }
+    });
+  });
 }
 
 function renderHomeNextAssessment() {
