@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#06345c" />
-    <title>V-SAFE | Family App</title>
+    <title>อุ่นใจ| Family App</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -31,11 +31,11 @@
       </svg>
       <header class="app-header">
         <div class="brand-lockup">
-          <img src="./icon%20app.png" alt="V-SAFE" class="brand-mark" />
+          <img src="./icon%20app.png" alt="อุ่นใจ" class="brand-mark" />
           <div>
-            <p class="eyebrow">Violence-Screening Alert</p>
-            <h1>V-SAFE</h1>
-            <p>Family Engagement</p>
+            <p class="eyebrow"> </p>
+            <h1>อุ่นใจ</h1>
+            <p>ระบบเฝ้าระวังและช่วยเหลือผู้ป่วยจิตเวชและครอบครัว</p>
           </div>
         </div>
         <div class="header-actions">
@@ -232,45 +232,33 @@
 
       <main id="appMain" class="hidden">
         <section id="view-home" class="view active">
-          <div class="hero-panel clean-home-hero">
-            <div class="hero-copy">
-              <div class="hero-brand-line">V-SAFE</div>
-              <h2>ร่วมดูแลอย่างปลอดภัย</h2>
-              <div class="hero-actions">
-                <button class="primary-btn" data-nav="assessment" type="button"><svg class="btn-icon"><use href="#i-clipboard"></use></svg>เริ่มประเมิน</button>
-                <button class="secondary-btn" data-nav="help" type="button"><svg class="btn-icon"><use href="#i-phone"></use></svg>ช่วยเหลือ</button>
+          <div class="hero-panel clean-home-hero" style="display: flex; flex-direction: column; gap: 1.5rem; padding-bottom: 1.5rem;">
+            
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+              <div class="hero-copy">
+                <div class="hero-brand-line" style="font-size: 1.8rem; color: var(--teal);">อุ่นใจ</div>
+                <h2 style="font-size: 1.25rem; line-height: 1.5; margin-top: 0.5rem; color: var(--navy);">
+                  ระบบเฝ้าระวังและช่วยเหลือ<br>ผู้ป่วยจิตเวชและครอบครัว
+                </h2>
+              </div>
+              <div class="hero-visual" aria-hidden="true" style="width: 6rem; flex-shrink: 0;">
+                <img class="hero-illustration" src="./VSAFE.png" alt="อุ่นใจ" style="width: 100%; border-radius: 0.5rem;" />
               </div>
             </div>
-            <div class="hero-visual" aria-hidden="true">
-              <img class="hero-illustration" src="./VSAFE.png" alt="" />
+
+            <div class="patient-panel" style="margin: 0; background: rgba(255, 255, 255, 0.95); padding: 1.25rem; border-radius: 1rem; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(6, 43, 77, 0.08); backdrop-filter: blur(10px);">
+              <div style="margin-bottom: 1rem; border-bottom: 1px solid rgba(6, 43, 77, 0.08); padding-bottom: 0.75rem;">
+                <p class="eyebrow teal-text" style="font-size: 0.8rem; margin-bottom: 0.2rem;">My Patients</p>
+                <h3 style="margin: 0; font-size: 1.15rem; color: var(--navy); display: flex; align-items: center; gap: 0.5rem;">
+                  <svg style="color: var(--teal); width: 1.4rem; height: 1.4rem;"><use href="#i-shield"></use></svg> ผู้ป่วยในความดูแล
+                </h3>
+              </div>
+              <div id="homePatientList" class="patient-list"></div>
             </div>
+
           </div>
 
-          <div class="quick-grid">
-            <button class="action-card" data-nav="register">
-              <span class="icon-circle teal"><svg><use href="#i-plus"></use></svg></span>
-              <strong>เพิ่มผู้ป่วย</strong>
-              <small>คนที่ 2-3 ในบัญชีนี้</small>
-            </button>
-            <button class="action-card" data-nav="assessment">
-              <span class="icon-circle green"><svg><use href="#i-clipboard"></use></svg></span>
-              <strong>ประเมิน 10 ข้อ</strong>
-              <small>คำนวณระดับอัตโนมัติ</small>
-            </button>
-            <button class="action-card danger" id="homeSos">
-              <span class="icon-circle red"><svg><use href="#i-phone"></use></svg></span>
-              <strong>ขอความช่วยเหลือ</strong>
-              <small>โทร Case manager</small>
-            </button>
-          </div>
-
-          <div class="patient-panel">
-            <div>
-              <p class="eyebrow teal-text">My Patients</p>
-              <h3><svg><use href="#i-shield"></use></svg> ผู้ป่วยในความดูแล</h3>
-            </div>
-            <div id="homePatientList" class="patient-list"></div>
-          </div>
+          <div class="zone-strip">
 
           <div class="zone-strip">
             <div class="zone-chip green"><b>Green</b><span>&lt; 7</span></div>
