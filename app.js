@@ -1224,23 +1224,19 @@ function renderHomeNextAssessment() {
   }
 }
 
-// ฟังก์ชันควบคุม Pop-up แจ้งเตือน
+// ฟังก์ชันควบคุม Pop-up แจ้งเตือน (อัปเดตให้แจ้งเตือนทุกครั้งจนกว่าจะประเมิน)
 function checkAndShowDuePopup(activePatient) {
-  // บันทึก Session เพื่อให้เด้งแค่ครั้งแรกที่เข้าแอปในแต่ละวัน ป้องกันการเด้งซ้ำซ้อนน่ารำคาญ
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const cacheKey = `notifiedDue_${activePatient.patientCode}_${todayStr}`;
-  
-  if (sessionStorage.getItem(cacheKey)) return; // ถ้าวันนี้เคยเด้งเตือนคนนี้แล้ว ให้ข้ามไป
-
   const dialog = document.querySelector("#dueAssessmentDialog");
   if (!dialog) return;
 
-  // ใส่รหัสผู้ป่วย/HN ลงในข้อความเพื่อความชัดเจน
+  // ใส่รหัสผู้ป่วย ลงในข้อความเพื่อความชัดเจน
   const nameLabel = document.querySelector("#duePatientName");
   if(nameLabel) nameLabel.textContent = `รหัส ${activePatient.patientCode}`;
 
-  dialog.showModal();
-  sessionStorage.setItem(cacheKey, "true"); // จำไว้ว่าเด้งแล้ว
+  // ตรวจสอบว่าถ้า Pop-up ยังไม่เปิดอยู่ ให้ทำการเปิด (เพื่อป้องกัน Error เปิดซ้อนกัน)
+  if (!dialog.open) {
+    dialog.showModal();
+  }
 }
 
 // ตั้งค่าปุ่มใน Pop-up แจ้งเตือน (ให้ทำงานเมื่อแอปโหลดเสร็จ)
