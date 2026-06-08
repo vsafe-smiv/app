@@ -85,7 +85,7 @@
         <div class="brand-lockup">
           <img src="./icon%20app.png" alt="อุ่นใจ" class="brand-mark" style="border-radius: 0.5rem;" />
           <div style="display: flex; flex-direction: column; justify-content: center; overflow: hidden;">
-            <h1 style="line-height: 1.4; padding-top: 0.2rem; margin: 0; font-size: 1.35rem; color: var(--navy);">อุ่นใจ</h1>
+            <h1 style="line-height: 1.4; padding-top: 0.2rem; margin: 0; font-size: 1.35rem; color: var(--navy);">V-SAFE</h1>
             <p style="white-space: normal; line-height: 1.3; font-size: 0.72rem; color: var(--muted); margin: 0; padding-right: 0.5rem;">ระบบเฝ้าระวังและช่วยเหลือผู้ป่วยจิตเวชและครอบครัว</p>
           </div>
         </div>
@@ -285,31 +285,59 @@
         
         <section id="view-home" class="view active">
           
-          <div style="background: linear-gradient(145deg, #0f766e 0%, #115e59 100%); border-radius: 0 0 1.75rem 1.75rem; padding: 2.2rem 1.25rem; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(15, 118, 110, 0.25);">
+          <div style="background: linear-gradient(145deg, #0f766e 0%, #115e59 100%); border-radius: 0 0 1.75rem 1.75rem; padding: 1.8rem 1rem; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(15, 118, 110, 0.25);">
             
-            <img src="./VSAFE2.png" alt="" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; object-position: center top; opacity: 0.12; mix-blend-mode: screen; pointer-events: none; z-index: 1;" />
-            
-            <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(15,118,110,0.1) 0%, rgba(17,94,89,0.7) 100%); z-index: 1; pointer-events: none;"></div>
+            <div style="position: absolute; top: -4rem; left: -3rem; width: 14rem; height: 14rem; background: radial-gradient(circle, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 75%); border-radius: 50%; pointer-events: none; z-index: 1;"></div>
 
-            <div style="position: relative; z-index: 2; margin-bottom: 2rem;">
-              <h2 style="font-size: 1.75rem; font-weight: 700; margin: 0; line-height: 1.4; color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.3); letter-spacing: 0.2px;">
-                รู้ไว ช่วยทัน<br>อุ่นใจทั้งครอบครัว
-              </h2>
-            </div>
-
-            <div style="background: rgba(255, 255, 255, 0.12); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 1.25rem; padding: 1.25rem; position: relative; z-index: 3; box-shadow: 0 10px 32px rgba(0,0,0,0.15);">
+            <div style="display: flex; gap: 0.75rem; align-items: stretch; position: relative; z-index: 2;">
               
-              <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.18); padding-bottom: 0.8rem; margin-bottom: 1rem;">
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <svg style="color: #4cd964; width: 1.2rem; height: 1.2rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.233-2.047-.652-2.952z"></path></svg>
-                  <h3 style="margin: 0; font-size: 1.05rem; font-weight: 600; color: white; text-shadow: 0 1px 4px rgba(0,0,0,0.2);">ผู้ป่วยในความดูแล</h3>
+              <div style="flex: 1.2; display: flex; flex-direction: column; justify-content: space-between; gap: 1rem;">
+                
+                <div>
+                  <h2 style="font-size: 1.4rem; font-weight: 700; margin: 0; line-height: 1.35; color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.2); letter-spacing: 0.1px;">
+                    รู้ไว ช่วยทัน<br>อุ่นใจทั้งครอบครัว
+                  </h2>
                 </div>
-                <span style="font-size: 0.72rem; color: rgba(255,255,255,0.95); background: rgba(0,0,0,0.25); padding: 3px 10px; border-radius: 1rem; font-weight: 500; letter-spacing: 0.3px;">Real-time</span>
-              </div>
-              
-              <div id="homePatientList"></div>
-            </div>
 
+                <div style="background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 1rem; padding: 0.9rem; box-shadow: 0 8px 24px rgba(0,0,0,0.12);">
+                  <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding-bottom: 0.5rem; margin-bottom: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.3rem;">
+                      <svg style="color: #4cd964; width: 1rem; height: 1rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.233-2.047-.652-2.952z"></path></svg>
+                      <h3 style="margin: 0; font-size: 0.9rem; font-weight: 600; color: white;">คนไข้ในดูแล</h3>
+                    </div>
+                    <span style="font-size: 0.65rem; color: rgba(255,255,255,0.8); background: rgba(0,0,0,0.15); padding: 1px 6px; border-radius: 1rem;">Live</span>
+                  </div>
+                  
+                  <div id="homePatientList"></div>
+                </div>
+
+              </div>
+
+              <div style="flex: 0.8; display: flex; justify-content: center; align-items: center; min-height: 190px;">
+                
+                <div style="width: 100%; max-width: 135px; height: 100%; min-height: 185px; border: 3.5px solid rgba(255,255,255,0.35); border-radius: 1.25rem; background: rgba(0, 0, 0, 0.25); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; padding: 0.5rem; box-shadow: 0 12px 28px rgba(0,0,0,0.35); border-bottom-width: 5px;">
+                  
+                  <div style="width: 25px; height: 3.5px; background: rgba(255,255,255,0.35); border-radius: 2px; margin: 0 auto 0.5rem; flex-shrink: 0;"></div>
+                  
+                  <img src="./VSAFE.png" alt="VSAFE Screen" style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.35; pointer-events: none; z-index: 1;" />
+                  
+                  <div style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(0,0,0,0) 30%, rgba(0,0,0,0.4) 100%); z-index: 2; pointer-events: none;"></div>
+
+                  <div style="position: relative; z-index: 3; display: flex; flex-direction: column; gap: 0.45rem; margin-top: auto; width: 100%;">
+                    
+                    <button onclick="document.querySelector('[data-nav=\'assessment\']')?.click()" style="background: #34c759; color: white; border: none; border-radius: 0.5rem; padding: 0.45rem 0.25rem; font-size: 0.72rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.25rem; cursor: pointer; box-shadow: 0 4px 10px rgba(52,199,89,0.3); font-family: inherit; transition: transform 0.1s ease;">
+                      <svg style="width: 0.85rem; height: 0.85rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>
+                      <span>เริ่มประเมิน</span>
+                    </button>
+                    
+                    <button id="homeSos" style="background: #ff3b30; color: white; border: none; border-radius: 0.5rem; padding: 0.45rem 0.25rem; font-size: 0.72rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 0.25rem; cursor: pointer; box-shadow: 0 4px 10px rgba(255,59,48,0.35); font-family: inherit; transition: transform 0.1s ease;">
+                      <svg style="width: 0.85rem; height: 0.85rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                      <span>SOS ฉุกเฉิน</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="knowledge-section">
