@@ -285,38 +285,33 @@
         
         <section id="view-home" class="view active">
           
-          <div style="padding: 1rem 1rem 0;">
+          <div style="background: linear-gradient(145deg, #06345c 0%, #0b678f 100%); border-radius: 0 0 1.75rem 1.75rem; padding: 2rem 1.25rem; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(6, 52, 92, 0.2);">
             
-            <div style="background: linear-gradient(135deg, #07847f 0%, #0e5d91 100%); border-radius: 1.25rem; padding: 1.5rem; color: white; display: flex; align-items: center; justify-content: space-between; gap: 1rem; box-shadow: 0 12px 24px rgba(7, 132, 127, 0.2); position: relative; overflow: hidden;">
-              
-              <div style="position: absolute; right: -2rem; top: -2rem; width: 10rem; height: 10rem; background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
-              <div style="position: absolute; right: 5rem; bottom: -3rem; width: 8rem; height: 8rem; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
-
-              <div style="position: relative; z-index: 1; flex: 1;">
-                <h2 style="font-size: 1.7rem; font-weight: 700; margin: 0; line-height: 1.4; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">อุ่นใจ</h2>
-                <p style="font-size: 0.9rem; margin: 0.25rem 0 0 0; line-height: 1.4; color: rgba(255, 255, 255, 0.9);">
-                  เคียงข้างคุณและครอบครัว<br>ดูแลผู้ป่วยอย่างปลอดภัย
+            <div style="position: absolute; top: -3rem; right: -2rem; width: 12rem; height: 12rem; background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
+            <div style="position: absolute; bottom: 2rem; left: -4rem; width: 10rem; height: 10rem; background: radial-gradient(circle, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 70%); border-radius: 50%;"></div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; position: relative; z-index: 2;">
+              <div>
+                <h2 style="font-size: 1.8rem; font-weight: 700; margin: 0; line-height: 1.2; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">อุ่นใจ</h2>
+                <p style="font-size: 0.9rem; margin: 0.4rem 0 0; color: rgba(255, 255, 255, 0.85); line-height: 1.4;">
+                  ระบบเฝ้าระวังและช่วยเหลือ<br>ผู้ป่วยจิตเวชและครอบครัว
                 </p>
               </div>
-
-              <div style="position: relative; z-index: 1; flex-shrink: 0; background: white; width: 4.5rem; height: 4.5rem; border-radius: 1rem; padding: 0.5rem; box-shadow: 0 8px 16px rgba(0,0,0,0.15);">
-                <img src="./VSAFE.png" alt="อุ่นใจ" style="width: 100%; height: 100%; object-fit: contain;" />
+              <div style="background: white; padding: 0.4rem; border-radius: 1rem; box-shadow: 0 8px 16px rgba(0,0,0,0.15);">
+                <img src="./VSAFE.png" alt="อุ่นใจ" style="width: 4.5rem; height: 4.5rem; object-fit: contain; border-radius: 0.75rem;" />
               </div>
             </div>
-            
-            <div style="margin-top: -1.25rem; position: relative; z-index: 2; padding: 0 0.75rem;">
-               <div style="background: rgba(255, 255, 255, 0.98); border-radius: 1rem; padding: 1.25rem; border: 1px solid var(--line); box-shadow: 0 8px 24px rgba(6, 43, 77, 0.08); backdrop-filter: blur(10px);">
-                 <div style="margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid rgba(6, 43, 77, 0.06); display: flex; align-items: flex-end; justify-content: space-between;">
-                    <div>
-                      <p style="margin: 0; font-size: 0.75rem; color: var(--teal); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">My Patients</p>
-                      <h3 style="margin: 0.2rem 0 0 0; font-size: 1.15rem; color: var(--navy); display: flex; align-items: center; gap: 0.4rem;">
-                        <svg style="color: var(--teal); width: 1.3rem; height: 1.3rem;"><use href="#i-shield"></use></svg> ผู้ป่วยในความดูแล
-                      </h3>
-                    </div>
-                 </div>
-                 <div id="homePatientList" class="patient-list"></div>
-               </div>
+
+            <div style="background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 1.25rem; padding: 1.25rem; position: relative; z-index: 2;">
+              <div style="display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+                <svg style="color: #4cd964; width: 1.2rem; height: 1.2rem;"><use href="#i-shield"></use></svg>
+                <h3 style="margin: 0; font-size: 1rem; font-weight: 600; color: white; letter-spacing: 0.3px;">ผู้ป่วยในความดูแล</h3>
+              </div>
+              
+              <div id="homePatientList"></div>
             </div>
+
+          </div>
 
           <div class="knowledge-section">
             <h3 class="knowledge-title">
