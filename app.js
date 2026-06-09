@@ -82,7 +82,6 @@ const addressData = [
   ["นครสวรรค์", "ชุมตาบง", "ชุมตาบง", "60150"]
 ];
 
-
 let registerDraftPatients = [];
 let selectedPatientDetailCode = null;
 
@@ -146,7 +145,9 @@ const zoneAdvice = {
   }
 };
 
-// ระบบ Local Cache สำหรับให้แอปทำงานลื่นไหล (อ่านจาก Cache แทนการรอเน็ต)
+// ==========================================
+// DATA LAYER (Local Cache & Cloud Sync)
+// ==========================================
 const storage = {
   get(key, fallback) {
     try {
@@ -161,7 +162,58 @@ const storage = {
   }
 };
 
+async function syncDataFromCloud() {
+  try {
+    console.log("กำลังซิงค์ข้อมูลจากฐานข้อมูลจริง...");
+    const response = await fetch(`${VSAFE_GAS_URL}?action=getAllData`);
+    const data = await response.json();
+    
+    if (data.ok) {
+      storage.set("patients", data.patients || []);
+      storage.set("caregivers", data.caregivers || []);
+      storage.set("caseManagers", data.caseManagers || []);
+      storage.set("assessments", data.assessments || []);
+      storage.set("alerts", data.alerts || []);
+      console.log("ซิงค์ข้อมูลสำเร็จ!");
+      return true;
+    } else {
+      console.error("ซิงค์ข้อมูลล้มเหลว:", data.message);
+      return false;
+    }
+  } catch (error) {
+    console.error("Network error ระหว่างการซิงค์:", error);
+    return false;
+  }
+}
 
+async function apiPost(action, payload) {
+  try {
+    const body = new URLSearchParams({ action, payload: JSON.stringify(payload) });
+    const response = await fetch(VSAFE_GAS_URL, { method: "POST", body });
+    const result = await response.json();
+    syncDataFromCloud(); 
+    return result;
+  } catch (error) {
+    console.info("V-SAFE Offline Mode: ข้อมูลถูกบันทึกลง Local ชั่วคราว", error.message);
+    return { ok: true, offline: true };
+  }
+}
+
+async function apiGet(action, params = {}) {
+  try {
+    const url = new URL(VSAFE_GAS_URL);
+    url.searchParams.set("action", action);
+    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+    const response = await fetch(url.toString());
+    return await response.json();
+  } catch {
+    return { ok: false };
+  }
+}
+
+// ==========================================
+// CAREGIVER & PATIENT LOGIC
+// ==========================================
 function getCaregivers() {
   return storage.get("caregivers", []);
 }
@@ -296,29 +348,9 @@ function findCaseManager(district) {
   return storage.get("caseManagers", []).find((cm) => cm.district === district) || storage.get("caseManagers", [])[0];
 }
 
-async function apiPost(action, payload) {
-  try {
-    const body = new URLSearchParams({ action, payload: JSON.stringify(payload) });
-    const response = await fetch(VSAFE_GAS_URL, { method: "POST", body });
-    return await response.json();
-  } catch (error) {
-    console.info("V-SAFE ใช้ localStorage ชั่วคราว:", error.message);
-    return { ok: true, offline: true };
-  }
-}
-
-async function apiGet(action, params = {}) {
-  try {
-    const url = new URL(VSAFE_GAS_URL);
-    url.searchParams.set("action", action);
-    Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
-    const response = await fetch(url.toString());
-    return await response.json();
-  } catch {
-    return { ok: false };
-  }
-}
-
+// ==========================================
+// UI & NAVIGATION INIT
+// ==========================================
 function initNavigation() {
   const navButtons = document.querySelectorAll("[data-nav]");
   navButtons.forEach((button) => {
@@ -454,6 +486,9 @@ function patientFromEdit(basePatient) {
   };
 }
 
+// ==========================================
+// AUTHENTICATION & REGISTRATION
+// ==========================================
 function initAuthFlow() {
   document.querySelectorAll("[data-auth-mode]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -584,7 +619,7 @@ function applySocialSignup(provider) {
 }
 
 function setRegisterStep(step) {
-  const nextStep = Math.min(5, Math.max(1, step)); // ปรับขีดจำกัดจาก 4 เป็น 5 สเต็ป
+  const nextStep = Math.min(5, Math.max(1, step));
   document.querySelectorAll(".register-step").forEach((panel) => {
     panel.classList.toggle("active", Number(panel.dataset.registerStep) === nextStep);
   });
@@ -607,7 +642,6 @@ async function validateRegisterStep(step) {
     }
   }
   
-  // เลื่อนการตรวจสอบข้อมูลบัญชี จากสเตป 1 เดิม มาอยู่ที่สเตป 2 ใหม่
   if (step === 2) {
     const payload = Object.fromEntries(new FormData(form).entries());
     if (payload.password !== payload.confirmPassword) {
@@ -620,7 +654,6 @@ async function validateRegisterStep(step) {
     }
   }
   
-  // เลื่อนการตรวจสอบการเลือกผู้ป่วย จากสเตป 3 เดิม มาอยู่ที่สเตป 4 ใหม่
   if (step === 4) {
     if (!registerDraftPatients.length) await addDraftPatientFromInput();
     if (!registerDraftPatients.length) {
@@ -698,6 +731,9 @@ function renderAuthenticatedApp() {
   renderHelpContacts();
 }
 
+// ==========================================
+// RENDERERS (Patient, Assessment, UI)
+// ==========================================
 function prefillCaregiverForm(caregiver) {
   const form = document.querySelector("#caregiverForm");
   if (!form) return;
@@ -714,7 +750,6 @@ function renderPatientPanels() {
     selectedPatientDetailCode = null;
   }
 
-  // --- HTML สำหรับหน้าแรก (Glassmorphism, โชว์แค่ รหัส/HN/พื้นที่/สถานะ) ---
   const homeHtml = linked.length
     ? linked
         .map((patient, index) => {
@@ -722,10 +757,9 @@ function renderPatientPanels() {
           const zone = patient.lastZone || classifyRisk(score);
           const isActive = active?.patientCode === patient.patientCode;
           
-          // กำหนดสี Badge ตามสถานะความเสี่ยง
-          let statusColor = "#34c759"; // เขียว (Green)
-          if (zone === "YELLOW") statusColor = "#f59e0b"; // เหลืองทอง (Yellow)
-          if (zone === "RED") statusColor = "#ff3b30"; // แดง (Red)
+          let statusColor = "#34c759";
+          if (zone === "YELLOW") statusColor = "#f59e0b";
+          if (zone === "RED") statusColor = "#ff3b30";
 
           return `
             <div data-active-patient="${escapeHtml(patient.patientCode)}" style="display: flex; justify-content: space-between; align-items: center; padding: 0.85rem 0; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.1); ${isActive ? 'opacity: 1;' : 'opacity: 0.75;'} transition: opacity 0.2s;">
@@ -758,7 +792,6 @@ function renderPatientPanels() {
         .join("")
     : `<div style="color: rgba(255,255,255,0.7); text-align: center; padding: 1rem;">ยังไม่มีผู้ป่วยในบัญชีนี้</div>`;
 
-  // --- HTML สำหรับหน้าจัดการผู้ป่วย (ซ่อนชื่อผู้ป่วยเช่นกัน) ---
   const linkedHtml = linked.length
     ? linked
         .map((patient, index) => {
@@ -777,7 +810,6 @@ function renderPatientPanels() {
         .join("")
     : `<div class="muted-box">ยังไม่มีผู้ป่วยในบัญชีนี้</div>`;
 
-  // ใส่ข้อมูลลงในหน้าแรก (Home)
   const homeContainer = document.querySelector("#homePatientList");
   if (homeContainer) {
     homeContainer.innerHTML = homeHtml;
@@ -789,7 +821,6 @@ function renderPatientPanels() {
     });
   }
 
-  // ใส่ข้อมูลลงในหน้าจัดการผู้ป่วย (Register/Linked)
   const linkedContainer = document.querySelector("#linkedPatientList");
   if (linkedContainer) {
     linkedContainer.innerHTML = linkedHtml;
@@ -1012,17 +1043,14 @@ function showResultDialog(assessment) {
   
   if (!dialog || !content) return;
 
-  // 1. ดึงข้อควรสังเกตเพิ่มเติม (สำหรับโซนสีเหลือง)
   const extra = assessment.zone === "YELLOW"
     ? `<h3>สิ่งที่ผู้ดูแลควรสังเกตเพิ่มเติม</h3><ul class="advice-list">${advice.observe.map((item) => `<li>${item}</li>`).join("")}</ul>`
     : "";
 
-  // 2. กำหนดชื่อกลุ่มเสี่ยงเพื่อแสดงในบล็อกคลังความรู้
   let riskLevelName = "ต่ำ";
   if (assessment.zone === "YELLOW") riskLevelName = "ปานกลาง";
   if (assessment.zone === "RED") riskLevelName = "สูง";
 
-  // 3. สร้างบล็อกคลังความรู้แบบใหม่ (กดแล้วกรองตามกลุ่มเสี่ยงอัตโนมัติ)
   const knowledgeBlockHtml = `
     <div onclick="if(typeof filterKnowledgeByZone === 'function') filterKnowledgeByZone('${assessment.zone}'); document.querySelector('[data-nav=\\'knowledge\\']')?.click(); document.querySelector('#resultDialog')?.close();" 
          style="background: #f0fdfa; border: 1px solid #0f766e; border-radius: 1rem; padding: 1rem; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 0.75rem; cursor: pointer; box-shadow: 0 4px 12px rgba(15, 118, 110, 0.05); text-align: left; transition: transform 0.2s;">
@@ -1037,12 +1065,10 @@ function showResultDialog(assessment) {
     </div>
   `;
 
-  // 4. ปุ่มฉุกเฉิน (มีเฉพาะปุ่มแดง SOS สำหรับ RED zone) - เอาปุ่มเปิดคลังความรู้รูปแบบเก่าออกแล้ว
   const emergency = assessment.zone === "RED"
     ? `<a class="danger-btn wide" href="tel:${cm?.phone || "1669"}">SOS โทรโรงพยาบาลในพื้นที่ ทันที</a>`
     : ``; 
 
-  // 5. โครงสร้าง HTML ที่ดึงการประเมิน ผลลัพธ์ คำแนะนำ และเบอร์โทรกลับมาตามโครงสร้างเดิมทั้งหมด
   content.innerHTML = `
     <div class="result-header ${zoneClass(assessment.zone)}">
       <p>${advice.label} | คะแนน ${assessment.score}</p>
@@ -1066,12 +1092,10 @@ function showResultDialog(assessment) {
     </div>
   `;
 
-  // ผูกคำสั่งให้ปุ่ม "รับทราบ" ปิด Pop-up
   content.querySelector("[data-close-dialog]")?.addEventListener("click", () => dialog.close());
   dialog.showModal();
 }
 
-// ฟังก์ชันสลับการแสดงผลคลังความรู้ 9 รายการ (แก้ไขจุดพิมพ์ผิดเรียบร้อย)
 function filterKnowledgeByZone(zone) {
   const knowledgeGrids = document.querySelectorAll(".knowledge-grid");
   if (!knowledgeGrids.length) return;
@@ -1082,7 +1106,6 @@ function filterKnowledgeByZone(zone) {
       const text = item.querySelector("span")?.textContent?.trim() || "";
       let itemZone = "GREEN"; 
 
-      // ลอจิกแยกแยะหัวข้อความรู้ประจำกลุ่มเสี่ยง
       if (["รู้โรค", "อารมณ์ดี", "คุยกัน"].includes(text)) {
         itemZone = "GREEN";   
       } else if (["กิจวัตร", "ปลอดยา", "ใจสบาย"].includes(text)) {
@@ -1091,7 +1114,6 @@ function filterKnowledgeByZone(zone) {
         itemZone = "RED";     
       }
 
-      // หากค่า zone เป็น null หรือตรงกับกลุ่มเสี่ยง ให้แสดงผลตามปกติ
       if (!zone || itemZone === zone) {
         item.style.setProperty("display", "flex", "important");
       } else {
@@ -1116,15 +1138,13 @@ function renderHomeNextAssessment() {
     return;
   }
 
-  // ดึงประวัติการประเมินของผู้ป่วยรายนี้และเรียงจาก ใหม่สุด ไป เก่าสุด
   const assessments = getLinkedAssessments()
     .filter((assessment) => assessment.patientCode === active.patientCode)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  // กรณีเพิ่งเพิ่มผู้ป่วย ยังไม่มีประวัติการประเมิน
   if (!assessments.length) {
     dateTarget.textContent = "ประเมินทันที";
-    dateTarget.style.color = "#ef4444"; // สีแดงแจ้งเตือน
+    dateTarget.style.color = "#ef4444"; 
     if (statusTarget) statusTarget.textContent = "ยังไม่มีประวัติในระบบ";
     if (countdownTarget) {
       countdownTarget.textContent = "รอการประเมินครั้งแรก";
@@ -1133,87 +1153,72 @@ function renderHomeNextAssessment() {
     return;
   }
 
-  // ============================================
-  // LOGIC ENGINE: ระบบคำนวณรอบการประเมิน
-  // ============================================
   let consecutiveGreenCount = 0;
   
-  // นับจำนวนลูป "สีเขียวติดต่อกัน" (ย้อนกลับไปในอดีต)
   for (const assessment of assessments) {
     if (assessment.zone === "GREEN") {
       consecutiveGreenCount++;
     } else {
-      break; // กฎการรีเซ็ต (Reset Rule): หยุดนับทันทีเมื่อเจอเหลืองหรือแดง
+      break; 
     }
   }
 
-  const latest = assessments[0]; // การประเมินครั้งล่าสุด
+  const latest = assessments[0]; 
   let intervalDays = 7;
   let statusText = "";
 
-  // คำนวณตามกฎ Business Rules
   if (latest.zone === "RED") {
-    // กฎข้อ 1: สีแดง ประเมินทุก 24 ชั่วโมง
     intervalDays = 1;
     statusText = "สถานะสีแดง: ประเมินซ้ำทุก 1 วัน";
   } else if (latest.zone === "YELLOW") {
-    // กฎข้อ 2: สีเหลือง ประเมินทุก 48 ชั่วโมง
     intervalDays = 2;
     statusText = "สถานะสีเหลือง: ประเมินซ้ำทุก 2 วัน";
   } else if (latest.zone === "GREEN") {
     if (consecutiveGreenCount <= 4) {
-      // กฎข้อ 3: สีเขียว ระดับที่ 1 (ครั้งที่ 1-4)
       intervalDays = 7;
       statusText = `สถานะสีเขียว (ระดับ 1): ประเมินทุก 7 วัน`;
     } else if (consecutiveGreenCount <= 6) {
-      // กฎข้อ 4: สีเขียว ระดับที่ 2 (ครั้งที่ 5-6)
       intervalDays = 14;
       statusText = `สถานะสีเขียว (ระดับ 2): ประเมินทุก 14 วัน`;
     } else {
-      // กฎข้อ 5: สีเขียว ระดับที่ 3 (ครั้งที่ 7 เป็นต้นไป)
       intervalDays = 30;
       statusText = `สถานะสีเขียว (ระดับ 3): ประเมินทุก 30 วัน`;
     }
   }
 
-  // คำนวณวันที่รอบถัดไป
   const lastDate = new Date(latest.createdAt);
   const nextDate = new Date(lastDate.getTime() + intervalDays * 86400000);
   
-  // จัดรูปแบบการแสดงผลวันที่ (ภาษาไทย)
   const options = { day: 'numeric', month: 'short', year: 'numeric' };
   dateTarget.textContent = nextDate.toLocaleDateString('th-TH', options);
 
   if (statusTarget) statusTarget.textContent = statusText;
 
-  // คำนวณจำนวนวันคงเหลือ (Countdown) แจ้งเตือนผู้ใช้งาน
   if (countdownTarget) {
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // รีเซ็ตเวลาของวันนี้ให้เป็น 00:00:00
+    today.setHours(0, 0, 0, 0); 
     
     const nextDateOnly = new Date(nextDate);
-    nextDateOnly.setHours(0, 0, 0, 0); // รีเซ็ตเวลาของวันนัดให้เป็น 00:00:00
+    nextDateOnly.setHours(0, 0, 0, 0); 
     
     const diffTime = nextDateOnly - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays > 0) {
       countdownTarget.textContent = `อีก ${diffDays} วัน`;
-      countdownTarget.style.color = "#64748b"; // สีเทาปกติ
-      dateTarget.style.color = "#0f766e"; // สีเขียวหลัก
+      countdownTarget.style.color = "#64748b"; 
+      dateTarget.style.color = "#0f766e"; 
     } else {
-      // กรณีถึงวันครบกำหนด (0) หรือเกินกำหนด (ติดลบ)
       if (diffDays === 0) {
         countdownTarget.textContent = "ครบกำหนดวันนี้!";
-        countdownTarget.style.color = "#f59e0b"; // สีเหลืองเตือน
+        countdownTarget.style.color = "#f59e0b"; 
         dateTarget.style.color = "#f59e0b";
       } else {
         countdownTarget.textContent = `เกินกำหนด ${Math.abs(diffDays)} วัน!`;
-        countdownTarget.style.color = "#ef4444"; // สีแดงอันตราย
+        countdownTarget.style.color = "#ef4444"; 
         dateTarget.style.color = "#ef4444";
       }
       
-      // เรียกฟังก์ชันแสดง Pop-up แจ้งเตือนให้ประเมิน (เรียกแค่กรณีที่ถึงกำหนดหรือเกินกำหนด)
       if (typeof checkAndShowDuePopup === "function") {
         checkAndShowDuePopup(active);
       }
@@ -1221,26 +1226,21 @@ function renderHomeNextAssessment() {
   }
 }
 
-// ฟังก์ชันควบคุม Pop-up แจ้งเตือน (อัปเดตให้แจ้งเตือนทุกครั้งจนกว่าจะประเมิน)
 function checkAndShowDuePopup(activePatient) {
   const dialog = document.querySelector("#dueAssessmentDialog");
   if (!dialog) return;
 
-  // ใส่รหัสผู้ป่วย ลงในข้อความเพื่อความชัดเจน
   const nameLabel = document.querySelector("#duePatientName");
   if(nameLabel) nameLabel.textContent = `รหัส ${activePatient.patientCode}`;
 
-  // ตรวจสอบว่าถ้า Pop-up ยังไม่เปิดอยู่ ให้ทำการเปิด (เพื่อป้องกัน Error เปิดซ้อนกัน)
   if (!dialog.open) {
     dialog.showModal();
   }
 }
 
-// ตั้งค่าปุ่มใน Pop-up แจ้งเตือน (ให้ทำงานเมื่อแอปโหลดเสร็จ)
 document.addEventListener("DOMContentLoaded", () => {
   document.querySelector("#btnStartDueAssessment")?.addEventListener("click", () => {
     document.querySelector("#dueAssessmentDialog")?.close();
-    // จำลองการกดปุ่มเมนู "ประเมิน" ด้านล่างเพื่อกระโดดไปหน้าประเมิน
     document.querySelector('[data-nav="assessment"]')?.click();
   });
   
@@ -1368,9 +1368,15 @@ function registerServiceWorker() {
   }
 }
 
-function initUserApp() {
+// ==========================================
+// MAIN INITIALIZATION (Async/Await Cloud Sync)
+// ==========================================
+async function initUserApp() {
   if (!document.body.classList.contains("user-app")) return;
-  ensureSeedData();
+  
+  // ซิงค์ข้อมูลลงมาให้พร้อมก่อนเปิดแอป
+  await syncDataFromCloud();
+  
   initNavigation();
   setupAddressSelects();
   initAuthFlow();
@@ -1383,7 +1389,6 @@ function initUserApp() {
   registerServiceWorker();
 }
 
-ensureSeedData();
 document.addEventListener("DOMContentLoaded", initUserApp);
 
 // ==========================================
@@ -1394,40 +1399,31 @@ function initConsentLogic() {
   const check2 = document.getElementById('consentCheck2');
   const radioAgree = document.getElementById('consentRadioAgree');
   const radioDisagree = document.getElementById('consentRadioDisagree');
-  const nextBtn = document.getElementById('step1NextBtn'); // ปุ่ม ถัดไป ในหน้าแรก
+  const nextBtn = document.getElementById('step1NextBtn'); 
 
-  // ถ้าไม่มี UI ให้ข้ามไป
   if (!check1 || !check2 || !radioAgree || !radioDisagree || !nextBtn) return;
 
-  // ฟังก์ชันเช็กเงื่อนไข (จะทำงานทุกครั้งที่มีการคลิกเลือก)
   const evaluateConsent = () => {
-    // ต้องติ๊กถูกทั้งสองข้อ และ เลือก "ยินยอม" เท่านั้น
     const isFullyConsented = check1.checked && check2.checked && radioAgree.checked;
-    
-    // ปลดล็อก (false) หรือ ล็อก (true) ปุ่มถัดไป
     nextBtn.disabled = !isFullyConsented;
   };
 
-  // ดักจับการเปลี่ยนแปลง (change) ของทุกๆ ตัวเลือก
   const consentInputs = document.querySelectorAll('.consent-input');
   consentInputs.forEach(input => {
     input.addEventListener('change', evaluateConsent);
   });
 
-  // รันเช็กครั้งแรกเมื่อโหลดหน้า
   evaluateConsent();
 }
+
 document.addEventListener("DOMContentLoaded", () => {
-  initConsentLogic(); // เรียกใช้งานระบบ Consent
+  initConsentLogic(); 
 });
-// ระบบเคลียร์ตัวกรองคลังความรู้เมื่อกดจากแถบเมนูด้านล่าง
+
 document.addEventListener("DOMContentLoaded", () => {
-  // ค้นหาปุ่มบนแถบเมนูด้านล่างที่มีคำสั่งสลับหน้าไปยังคลังความรู้ (data-nav="knowledge")
   const knowledgeTabBtn = document.querySelector('[data-nav="knowledge"]');
-  
   if (knowledgeTabBtn) {
     knowledgeTabBtn.addEventListener("click", () => {
-      // เรียกฟังก์ชันกรองความรู้โดยส่งค่า null เพื่อล้างตัวกรองและแสดงผลทั้งหมด 9 รายการ
       if (typeof filterKnowledgeByZone === "function") {
         filterKnowledgeByZone(null);
       }
