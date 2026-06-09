@@ -11,7 +11,7 @@ const priorityItemsPerPage = 10;
 async function initAdmin() {
   if (!document.body.classList.contains("admin-body")) return;
   
-  // จุดนี้จะทำการเรียกฟังก์ชันใน app.js เพื่อดึงทั้งข้อมูลผู้ป่วยและข้อมูล AddressData ลงเครื่องพร้อมกัน
+  // จุดนี้จะทำการเรียกฟังก์ชันใน app.js เพื่อดึงทั้งข้อมูลผู้ป่วยและข้อมูลที่อยู่
   await syncDataFromCloud(); 
 
   initLogin();
@@ -23,29 +23,14 @@ async function initAdmin() {
   initClock();
   renderDashboard();
   
-  // ระบบ Auto-Sync เบื้องหลังทุกๆ 30 วินาที จะอัปเดตข้อมูลที่อยู่ใหม่ๆ ตามไปด้วยเสมอ
+  // ระบบ Auto-Sync เบื้องหลังทุกๆ 30 วินาที จะอัปเดตข้อมูลที่อยู่ใหม่ๆ ตามไป
   setInterval(async () => {
     await syncDataFromCloud();
     renderDashboard();
   }, 30000);
 }
-  
-  // ซิงค์ข้อมูลจากฐานข้อมูลก่อนเปิดหน้า Dashboard
-  await syncDataFromCloud();
 
-  initLogin();
-  initAdminNavigation();
-  setupAddressSelects(document);
-  initAdminForms();
-  initClock();
-  renderDashboard();
-  
-  // เพิ่มการ Auto-Sync ทุกๆ 30 วินาที เพื่อให้ Dashboard อัปเดตข้อมูลล่าสุดเสมอ
-  setInterval(async () => {
-    await syncDataFromCloud();
-    renderDashboard();
-  }, 30000);
-}
+document.addEventListener("DOMContentLoaded", initAdmin);
 
 function initLogin() {
   const login = document.querySelector("#adminLogin");
@@ -228,7 +213,7 @@ function hideCaseManagerForm() {
 }
 
 // =========================================================
-// ปรับปรุงฟังก์ชันเปิดหน้าฟอร์ม (showPatientForm) ให้เคลียร์และป้อน 4 ช่องใหม่ได้ครบถ้วน
+// ปรับปรุงฟังก์ชันเปิดหน้าฟอร์ม (showPatientForm) ให้เคลียร์และป้อน 4 ช่องใหม่
 // =========================================================
 function showPatientForm(patient = null) {
   const card = document.querySelector("#patientFormCard");
@@ -242,8 +227,8 @@ function showPatientForm(patient = null) {
   form.elements.editingKey.value = patient?.patientCode || "";
   
   if (patient) {
-    // โหลดฟิลด์ข้อมูลรวมถึง 4 ฟิลด์ที่อยู่ที่สร้างขึ้นมาใหม่ลงบนช่องกรอก
-    ["patientCode","hn","prefix","fullName","gender","dob","violenceHistoryDate","substanceUse","substanceDetail","dx","dischargeDate","baselineScore","zipcode","houseNo","moo","villageName","road","latlng"].forEach((name) => {
+    // โหลดฟิลด์ข้อมูลรวมถึง 4 ฟิลด์ที่อยู่ที่สร้างขึ้นมาใหม่ลงบนช่องฟอร์ม
+    ["patientCode","hn","prefix","fullName","gender","dob","violenceHistoryDate","substanceUse","substanceDetail","dx","dischargeDate","baselineScore","zipcode","houseNo","moo","villageName","road"].forEach((name) => {
       if (form.elements[name]) form.elements[name].value = patient[name] || "";
     });
     setAddressFormValues(form, patient);
@@ -313,7 +298,7 @@ function initPatientAddressAutomation() {
     form.elements[name]?.addEventListener("input", () => updatePatientLatLng(form));
   });
 
-  // ปุ่มกดรับพิกัดปัจจุบันจาก GPS สดของอุปกรณ์ ณ ขณะนั้น (สำหรับงานลงพื้นที่เชิงรุก)
+  // ปุ่มกดรับพิกัดปัจจุบันจาก GPS สดของอุปกรณ์ ณ ขณะนั้น (สำหรับงานลงพื้นที่)
   document.querySelector("#btnGetActualGPS")?.addEventListener("click", () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition((position) => {
@@ -334,7 +319,7 @@ function initPatientAddressAutomation() {
 function setupAddressSelects(scope = document) {
   const provinceSelects = scope.querySelectorAll(".adminProvince");
   
-  // เปลี่ยนมาดึงข้อมูลจริงจากฐานข้อมูลที่บันทึกไว้ใน storage (ที่รับมาจาก Google Sheets)
+  // เปลี่ยนมาดึงข้อมูลจริงจากฐานข้อมูลที่บันทึกไว้ใน storage (ที่รับมาจาก Google Apps Script)
   // หากยังไม่มีให้ใช้ Array ว่างเปล่าเพื่อป้องกันระบบพัง
   const addressList = storage.get("addressData") || []; 
 
@@ -457,7 +442,7 @@ function updatePatientLatLng(form) {
 
 function calculateLatLngFromAddress(payload) {
   const districtCoords = {
-    "เมืองนครสวรรค์": [15.7047, 100.1372], "โกรกพระ": [15.5559, 100.0712], "ชุมแสง": [15.8918, 100.3079], "หนองบัว": [15.8645, 100.5869],
+    "เมืองนครสวรรค์": [15.7047, 100.1372], "โกรกพระ": [15.5559, 100.0712], "ชุมแสง": [15.8918, 100.3079], "หนองบัว": [15.8645, 100.3238],
     "บรรพตพิสัย": [15.9362, 99.9815], "เก้าเลี้ยว": [15.8506, 100.0794], "ตาคลี": [15.2633, 100.3438], "ท่าตะโก": [15.6422, 100.4789],
     "ไพศาลี": [15.6008, 100.6551], "พยุหะคีรี": [15.4552, 100.1358], "ลาดยาว": [15.7511, 99.7897], "ตากฟ้า": [15.3499, 100.4956],
     "แม่วงก์": [15.7811, 99.5205], "แม่เปิน": [15.6578, 99.4687], "ชุมตาบง": [15.6333, 99.5534]
@@ -895,7 +880,7 @@ window.changePriorityPage = function(delta) {
 
 function zoneWeight(zone) { return { GREEN: 1, YELLOW: 2, RED: 3 }[zone] || 0; }
 function statusOptions(current) {
-  const options = ["ติดตามต่อเนื่อง", "เฝ้าระวัง", "รอการติดต่อ", "รอการช่วยเหลือ", "ช่วยเหลือสำเร็จ: รับไว้ในความดูแล", "ช่วยเหลือสำเร็จ: ส่งต่อรพ.ใกล้บ้าน"];
+  const options = ["ติดตามต่อเนื่อง", "เฝ้าระวัง", "รอการติดต่อ", "รอการช่วยเหลือ", "ช่วยเหลือแล้ว"];
   return options.map((option) => `<option ${option === current ? "selected" : ""}>${option}</option>`).join("");
 }
 
@@ -915,7 +900,7 @@ function updatePatientStatus(patientCode, status) {
 }
 
 // =========================================================
-// แก้ไขระบบแสดงผลรายละเอียดที่อยู่ผู้ป่วยแบบเต็มตัว ในตารางและหน้าต่างข้อมูล
+// แก้ไขระบบแสดงผลรายละเอียดที่อยู่ผู้ป่วยแบบเต็มตัว ในตารางและหน้ารายละเอียด
 // =========================================================
 function showPatientDetail(patientCode) {
   const row = patientCurrentRows().find((patient) => patient.patientCode === patientCode);
@@ -955,7 +940,7 @@ function showPatientDetail(patientCode) {
     </div>
     <h3>ข้อมูลผู้ดูแล (ญาติ)</h3>
     <div class="caregiver-detail-list">
-      ${caregivers.length ? caregivers.map((c) => `<article><strong>${escapeHtml(c.prefix || "")}${escapeHtml(c.fullName || "")}</strong><span>${escapeHtml(c.relationship || "-")} | ${escapeHtml(c.phone || "-")}</span><small>${escapeHtml(c.addressLine || "-")} อ.${escapeHtml(c.district || "-")}</small></article>`).join("") : `<div class="muted-box">ยังไม่พบผู้ดูแลที่เชื่อมกับผู้ป่วยรายนี้</div>`}
+      ${caregivers.length ? caregivers.map((c) => `<article><strong>${escapeHtml(c.prefix || "")}${escapeHtml(c.fullName || "")}</strong><span>${escapeHtml(c.relationship || "-")} | ${escapeHtml(c.phone || "-")}</span></article>`).join("") : "<p style='color: #999;'>ไม่มีข้อมูลผู้ดูแล</p>"}
     </div>
   `);
 }
@@ -994,7 +979,7 @@ function showCaseManagerDetail(id) {
   const patients = patientCurrentRows().filter((patient) => patient.district === cm.district);
   showAdminDetail(`
     <div class="detail-summary teal">
-      <span class="detail-avatar"><svg style="width:2.5rem; height:2.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg></span>
+      <span class="detail-avatar"><svg style="width:2.5rem; height:2.5rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path></svg></span>
       <h2>${escapeHtml(cm.workplace || "ไม่มีชื่อโรงพยาบาล")}</h2><p>โทรศัพท์: ${escapeHtml(cm.phone || "-")}</p>
     </div>
     <div class="detail-grid-admin">
@@ -1004,7 +989,7 @@ function showCaseManagerDetail(id) {
     </div>
     <h3>ผู้ป่วยในพื้นที่รับผิดชอบ</h3>
     <div class="mini-table-list">
-      ${patients.length ? patients.map((p) => `<article><strong>${escapeHtml(p.hn)}</strong><span>${escapeHtml(p.prefix || "")}${escapeHtml(p.fullName || "")}</span><em class="${zoneClass(p.zone)}">${p.zone}</em></article>`).join("") : `<div class="muted-box">ยังไม่มีผู้ป่วยในพื้นที่นี้</div>`}
+      ${patients.length ? patients.map((p) => `<article><strong>${escapeHtml(p.hn)}</strong><span>${escapeHtml(p.prefix || "")}${escapeHtml(p.fullName || "")}</span><em class="${zoneClass(p.zone)}">${p.zone}</em></article>`).join("") : "<p style='color: #999;'>ไม่มีผู้ป่วยในพื้นที่นี้</p>"}
     </div>
   `);
 }
@@ -1133,34 +1118,3 @@ function acknowledgeSos() {
   const alerts = storage.get("alerts", []).map((alert) => (alert.zone === "RED" ? { ...alert, acknowledged: true, status: alert.status || "รอการช่วยเหลือ" } : alert));
   storage.set("alerts", alerts); stopAlarm(); document.querySelector("#sosDialog")?.close(); renderAlertFeed(); renderDashboardAlerts();
 }
-// ฟังก์ชันรวมที่อยู่สำหรับส่งไปหาพิกัด
-function getFullAddressForGeocoding() {
-  const form = document.querySelector("#patientForm");
-  const province = form.elements['province']?.value || "";
-  const district = form.elements['district']?.value || "";
-  const subdistrict = form.elements['subdistrict']?.value || "";
-  
-  const houseNo = form.elements['houseNo']?.value || "";
-  const moo = form.elements['moo']?.value ? "ม." + form.elements['moo']?.value : "";
-  const village = form.elements['villageName']?.value || "";
-  const road = form.elements['road']?.value ? "ถ." + form.elements['road']?.value : "";
-
-  // รวมเป็นข้อความเต็ม
-  return `${houseNo} ${moo} ${village} ${road} ต.${subdistrict} อ.${district} จ.${province}`;
-}
-
-// เพิ่ม Event Listener ใน initAdminForms หรือจุดที่เหมาะสม
-function initAddressAutoGeocode() {
-  const form = document.querySelector("#patientForm");
-  const fields = ['province', 'district', 'subdistrict', 'houseNo', 'moo', 'villageName', 'road'];
-  
-  fields.forEach(name => {
-    form.elements[name]?.addEventListener('input', () => {
-      const fullAddress = getFullAddressForGeocoding();
-      // สมมติว่าคุณมีฟังก์ชันอัปเดตพิกัดเดิมอยู่แล้ว
-      // updatePatientLatLng(form, fullAddress); 
-    });
-  });
-}
-
-document.addEventListener("DOMContentLoaded", initAdmin);
