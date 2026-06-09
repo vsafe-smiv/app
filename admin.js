@@ -157,7 +157,7 @@ function initAdminForms() {
       payload.id = `CM-${Date.now()}`;
       payload.createdAt = thaiTimestamp();
     }
-    const saved = await saveToCloudOrAlert("saveCaseManager", payload, "ไม่สามารถบันทึกข้อมูลโรงพยาบาลลงฐานข้อมูลจริงได้");
+    const saved = await saveToCloudOrAlert("saveCaseManager", payload, "ไม่สามารถบันทึกข้อมูลโรงพยาบาลลงฐานข้อมูลได้");
     if (!saved) return;
     await AppDialog.alert("บันทึกข้อมูลโรงพยาบาลในพื้นที่เรียบร้อยแล้ว", "สำเร็จ", "success");
     form.reset();
@@ -182,7 +182,7 @@ function initAdminForms() {
     } else {
       payload.createdAt = thaiTimestamp();
     }
-    const saved = await saveToCloudOrAlert("savePatient", payload, "ไม่สามารถบันทึกข้อมูลผู้ป่วยลงฐานข้อมูลจริงได้");
+    const saved = await saveToCloudOrAlert("savePatient", payload, "ไม่สามารถบันทึกข้อมูลผู้ป่วยลงฐานข้อมูลได้");
     if (!saved) return;
     await AppDialog.alert("บันทึกข้อมูลผู้ป่วยเรียบร้อยแล้ว", "สำเร็จ", "success");
     form.reset();
@@ -329,7 +329,7 @@ function initPatientAddressAutomation() {
 }
 
 // =========================================================
-// แก้ไขฟังก์ชัน setupAddressSelects ให้ดึงจากข้อมูลฐานข้อมูลจริง
+// แก้ไขฟังก์ชัน setupAddressSelects ให้ดึงจากข้อมูลฐานข้อมูล
 // =========================================================
 function setupAddressSelects(scope = document) {
   const provinceSelects = scope.querySelectorAll(".adminProvince");
@@ -900,7 +900,7 @@ function statusOptions(current) {
 }
 
 async function updatePatientStatus(patientCode, status) {
-  const saved = await saveToCloudOrAlert("updateStatus", { patientCode, status }, "ไม่สามารถอัปเดตสถานะผู้ป่วยในฐานข้อมูลจริงได้");
+  const saved = await saveToCloudOrAlert("updateStatus", { patientCode, status }, "ไม่สามารถอัปเดตสถานะผู้ป่วยในฐานข้อมูลได้");
   if (!saved) {
     renderPriorityTable();
     return;
@@ -1067,7 +1067,7 @@ async function deleteCaseManager(id) {
   const confirmed = await AppDialog.confirm(`ต้องการลบข้อมูลของ ${cm.workplace || "โรงพยาบาลนี้"} (อ.${cm.district || "-"}) ใช่หรือไม่?`, "ยืนยันการลบ");
   if (!confirmed) return;
   
-  const deleted = await saveToCloudOrAlert("deleteCaseManager", { id }, "ไม่สามารถลบข้อมูลโรงพยาบาลออกจากฐานข้อมูลจริงได้");
+  const deleted = await saveToCloudOrAlert("deleteCaseManager", { id }, "ไม่สามารถลบข้อมูลโรงพยาบาลออกจากฐานข้อมูลได้");
   if (!deleted) return;
   
   renderCaseManagerTable();
@@ -1118,7 +1118,7 @@ async function deletePatientRecord(patientCode) {
   const confirmed = await AppDialog.confirm(`ลบข้อมูลผู้ป่วย HN ${patient.hn || "-"} ใช่หรือไม่?`, "ยืนยันการลบ");
   if (!confirmed) return;
   
-  const deleted = await saveToCloudOrAlert("deletePatient", { patientCode }, "ไม่สามารถลบข้อมูลผู้ป่วยออกจากฐานข้อมูลจริงได้");
+  const deleted = await saveToCloudOrAlert("deletePatient", { patientCode }, "ไม่สามารถลบข้อมูลผู้ป่วยออกจากฐานข้อมูลได้");
   if (!deleted) return;
   
   renderAdminPatientTable();
@@ -1225,7 +1225,7 @@ function stopAlarm() { if (alarmTimer) clearInterval(alarmTimer); alarmTimer = n
 async function acknowledgeSos(alertId) {
   if (!alertId) return;
 
-  const saved = await saveToCloudOrAlert("acknowledgeAlert", { alertId: alertId }, "ไม่สามารถบันทึกการรับทราบ SOS ลงฐานข้อมูลจริงได้");
+  const saved = await saveToCloudOrAlert("acknowledgeAlert", { alertId: alertId }, "ไม่สามารถบันทึกการรับทราบ SOS ลงฐานข้อมูลได้");
   if (!saved) return;
 
   stopAlarm();
