@@ -7,6 +7,76 @@ let selectedTrendMonth = new Date().getMonth();
 let selectedTrendYear = new Date().getFullYear();
 let currentPriorityPage = 1;
 const priorityItemsPerPage = 10;
+// =========================================================
+// CUSTOM DIALOG UTILITY (ลบการใช้ window.alert, confirm ทิ้ง)
+// =========================================================
+const AppDialog = {
+  init() {
+    if (document.getElementById('modernAppDialog')) return;
+    const html = `
+      <dialog id="modernAppDialog" class="modern-dialog">
+        <div class="modern-dialog-box">
+          <div id="dialogIcon" class="modern-dialog-icon"></div>
+          <h3 id="dialogTitle">แจ้งเตือน</h3>
+          <p id="dialogMessage"></p>
+          <div class="modern-dialog-actions">
+            <button id="dialogBtnCancel" class="secondary-btn hidden">ยกเลิก</button>
+            <button id="dialogBtnConfirm" class="primary-btn">ตกลง</button>
+          </div>
+        </div>
+      </dialog>
+    `;
+    document.body.insertAdjacentHTML('beforeend', html);
+  },
+  show(type, msg, title) {
+    return new Promise((resolve) => {
+      this.init();
+      const dialog = document.getElementById('modernAppDialog');
+      const titleEl = document.getElementById('dialogTitle');
+      const msgEl = document.getElementById('dialogMessage');
+      const iconEl = document.getElementById('dialogIcon');
+      const btnConfirm = document.getElementById('dialogBtnConfirm');
+      const btnCancel = document.getElementById('dialogBtnCancel');
+
+      msgEl.textContent = msg;
+      titleEl.textContent = title || "แจ้งเตือน";
+
+      // ไอคอน 3 สถานะ (สำเร็จ, แจ้งเตือน, ข้อมูล)
+      const icons = {
+        info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4M12 8h.01"></path></svg>`,
+        success: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`,
+        warning: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`
+      };
+
+      iconEl.innerHTML = icons[type] || icons.info;
+      iconEl.className = `modern-dialog-icon ${type}`;
+
+      // กรณีเป็น Confirm (ให้แสดงปุ่มยกเลิกด้วย)
+      if (type === 'warning' || type === 'confirm') {
+        btnCancel.classList.remove('hidden');
+      } else {
+        btnCancel.classList.add('hidden');
+      }
+
+      const cleanup = () => {
+        btnConfirm.onclick = null;
+        btnCancel.onclick = null;
+        dialog.close();
+      };
+
+      btnConfirm.onclick = () => { cleanup(); resolve(true); };
+      btnCancel.onclick = () => { cleanup(); resolve(false); };
+
+      dialog.showModal();
+    });
+  },
+  alert(msg, title = "แจ้งเตือน", type = "info") {
+    return this.show(type, msg, title);
+  },
+  confirm(msg, title = "ยืนยันการทำรายการ") {
+    return this.show('confirm', msg, title);
+  }
+};
 
 async function initAdmin() {
   if (!document.body.classList.contains("admin-body")) return;
