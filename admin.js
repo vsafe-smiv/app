@@ -243,21 +243,34 @@ function hidePatientForm() {
   document.querySelector("#patientFormCard")?.classList.add("hidden");
 }
 
-function setAddressFormValues(form, payload) {
-  if (!form || !payload) return;
-  if (form.elements.province && payload.province) {
-    form.elements.province.value = payload.province;
-    form.elements.province.dispatchEvent(new Event("change", { bubbles: true }));
+function setAddressFormValues(form, patient) {
+  const provinceSelect = form.querySelector(".adminProvince");
+  const districtSelect = form.querySelector(".adminDistrict");
+  const subdistrictSelect = form.querySelector(".adminSubdistrict");
+  const zipcodeInput = form.querySelector(".adminZipcode");
+
+  if (!provinceSelect || !patient) return;
+
+  // 1. เลือกจังหวัด
+  provinceSelect.value = patient.province || "";
+  // สั่งให้ดรอปดาวน์อัปเดตรายการอำเภอตามจังหวัดนั้น
+  provinceSelect.dispatchEvent(new Event("change"));
+
+  // 2. เลือกอำเภอ
+  if (districtSelect) {
+    districtSelect.value = patient.district || "";
+    // สั่งให้ดรอปดาวน์อัปเดตรายการตำบลตามอำเภอนั้น
+    districtSelect.dispatchEvent(new Event("change"));
   }
-  if (form.elements.district && payload.district) {
-    form.elements.district.value = payload.district;
-    form.elements.district.dispatchEvent(new Event("change", { bubbles: true }));
+
+  // 3. เลือกตำบล
+  if (subdistrictSelect) {
+    subdistrictSelect.value = patient.subdistrict || "";
   }
-  if (form.elements.subdistrict && payload.subdistrict) {
-    form.elements.subdistrict.value = payload.subdistrict;
-    form.elements.subdistrict.dispatchEvent(new Event("change", { bubbles: true }));
+  
+  if (zipcodeInput) {
+    zipcodeInput.value = patient.zipcode || "";
   }
-  if (form.elements.zipcode && payload.zipcode) form.elements.zipcode.value = payload.zipcode;
 }
 
 // =========================================================
@@ -297,17 +310,19 @@ function initPatientAddressAutomation() {
 }
 
 // =========================================================
-// เพิ่มระบบ INITIALIZE ข้อมูลตารางที่อยู่จากฐานข้อมูลแบบใหม่
-// รองรับหัวข้อ: province, amphoe, tambon, zipcode
+// แก้ไขฟังก์ชัน setupAddressSelects ให้ดึงจากข้อมูลฐานข้อมูลจริง
 // =========================================================
 function setupAddressSelects(scope = document) {
   const provinceSelects = scope.querySelectorAll(".adminProvince");
   
-  // ดึงข้อมูล AddressData จาก Cloud Cache (ถ้าไม่มีให้ Fallback เป็นข้อมูลจำลองต้นแบบ)
-  const addressList = storage.get("addressData") || [
-    { province: "นครสวรรค์", amphoe: "เมืองนครสวรรค์", tambon: "ปากน้ำโพ", zipcode: "60000" },
-    { province: "นครสวรรค์", amphoe: "เมืองนครสวรรค์", ... }
-  ];
+  // เปลี่ยนมาดึงข้อมูลจริงจากฐานข้อมูลที่บันทึกไว้ใน storage (ที่รับมาจาก Google Sheets)
+  // หากยังไม่มีให้ใช้ Array ว่างเปล่าเพื่อป้องกันระบบพัง
+  const addressList = storage.get("addressData") || []; 
+
+  if (addressList.length === 0) {
+    console.warn("ไม่พบข้อมูลที่อยู่ในฐานข้อมูล (addressData)");
+    return;
+  }
 
   provinceSelects.forEach((provinceSelect) => {
     const form = provinceSelect.closest("form");
@@ -317,40 +332,82 @@ function setupAddressSelects(scope = document) {
     const subdistrictSelect = form.querySelector(".adminSubdistrict");
     const zipcodeInput = form.querySelector(".adminZipcode");
 
-    // Extract รายชื่อจังหวัดที่ไม่ซ้ำ
-    const uniqueProvinces = [...new Set(addressList.map(item => item.province))];
-    provinceSelect.innerHTML = uniqueProvinces.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join("");
+    // 1. ดึงรายชื่อจังหวัดทั้งหมดแบบไม่ซ้ำกัน (ตามคอลัมน์ province)
+    const uniqueProvinces = [...new Set(addressList.map(item => item.province))].filter(Boolean).sort();
+    
+    // ใส่ตัวเลือกจังหวัดลงไปในดรอปดาวน์
+    provinceSelect.innerHTML = `<option value="">-- เลือกจังหวัด --</option>` + 
+      uniqueProvinces.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join("");
 
+    // 2. ฟังก์ชันอัปเดตอำเภอเมื่อจังหวัดเปลี่ยน (ตามคอลัมน์ amphoe)
     const refreshDistricts = () => {
       if (!districtSelect) return;
-      const filtered = addressList.filter(item => item.province === provinceSelect.value);
-      const uniqueAmphoes = [...new Set(filtered.map(item => item.amphoe))];
-      districtSelect.innerHTML = uniqueAmphoes.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join("");
+      const selectedProvince = provinceSelect.value;
+      
+      if (!selectedProvince) {
+        districtSelect.innerHTML = '<option value="">-- เลือกอำเภอ --</option>';
+        if (subdistrictSelect) subdistrictSelect.innerHTML = '<option value="">-- เลือกตำบล --</option>';
+        if (zipcodeInput) zipcodeInput.value = '';
+        return;
+      }
+
+      const filtered = addressList.filter(item => item.province === selectedProvince);
+      const uniqueAmphoes = [...new Set(filtered.map(item => item.amphoe))].filter(Boolean).sort();
+      
+      districtSelect.innerHTML = `<option value="">-- เลือกอำเภอ --</option>` +
+        uniqueAmphoes.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join("");
+      
       refreshSubdistricts();
     };
 
+    // 3. ฟังก์ชันอัปเดตตำบลเมื่ออำเภอเปลี่ยน (ตามคอลัมน์ tambon)
     const refreshSubdistricts = () => {
       if (!subdistrictSelect) return;
-      const filtered = addressList.filter(item => item.province === provinceSelect.value && item.amphoe === districtSelect.value);
-      subdistrictSelect.innerHTML = filtered.map(item => `<option value="${escapeHtml(item.tambon)}">${escapeHtml(item.tambon)}</option>`).join("");
+      const selectedProvince = provinceSelect.value;
+      const selectedAmphoe = districtSelect.value;
+
+      if (!selectedAmphoe) {
+        subdistrictSelect.innerHTML = '<option value="">-- เลือกตำบล --</option>';
+        if (zipcodeInput) zipcodeInput.value = '';
+        return;
+      }
+
+      const filtered = addressList.filter(item => item.province === selectedProvince && item.amphoe === selectedAmphoe);
+      const uniqueTambons = [...new Set(filtered.map(item => item.tambon))].filter(Boolean).sort();
       
+      subdistrictSelect.innerHTML = `<option value="">-- เลือกตำบล --</option>` +
+        filtered.map(item => `<option value="${escapeHtml(item.tambon)}">${escapeHtml(item.tambon)}</option>`).join("");
+      
+      // อัปเดตรหัสไปรษณีย์และพิกัดเริ่มต้น
       if (zipcodeInput && filtered.length > 0) {
         zipcodeInput.value = filtered[0].zipcode || "";
       }
-      updatePatientLatLng(form);
+      if (typeof updatePatientLatLng === "function") updatePatientLatLng(form);
     };
 
+    // ผูกเหตุการณ์การเปลี่ยนแปลงค่าดรอปดาวน์ (Event Listeners)
     provinceSelect.addEventListener("change", refreshDistricts);
     districtSelect?.addEventListener("change", refreshSubdistricts);
+    
     subdistrictSelect?.addEventListener("change", () => {
-      const match = addressList.find(item => item.province === provinceSelect.value && item.amphoe === districtSelect.value && item.tambon === subdistrictSelect.value);
-      if (zipcodeInput && match) zipcodeInput.value = match.zipcode || "";
-      updatePatientLatLng(form);
+      const selectedProvince = provinceSelect.value;
+      const selectedAmphoe = districtSelect.value;
+      const selectedTambon = subdistrictSelect.value;
+      
+      const match = addressList.find(item => 
+        item.province === selectedProvince && 
+        item.amphoe === selectedAmphoe && 
+        item.tambon === selectedTambon
+      );
+      
+      if (zipcodeInput && match) {
+        zipcodeInput.value = match.zipcode || "";
+      }
+      if (typeof updatePatientLatLng === "function") updatePatientLatLng(form);
     });
-
-    refreshDistricts();
   });
 }
+
 
 // =========================================================
 // ปรับปรุงฟังก์ชันคำนวณที่อยู่เต็ม และ ผูก Event ตรวจจับอัตโนมัติ
