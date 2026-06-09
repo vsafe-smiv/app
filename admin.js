@@ -586,12 +586,11 @@ function parseLatLng(value = "") {
   return [lat, lng];
 }
 
-
 function renderDashboardAlerts() {
   const container = document.querySelector("#dashboardAlertFeed");
   if (!container) return;
   
-  // เพิ่ม class ให้ container เพื่อให้ CSS ทำงาน
+  // กำหนด Class สำหรับ Container เพื่อให้ CSS ทำงาน
   container.className = "alert-feed-container";
 
   const alerts = storage.get("alerts", []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
@@ -599,23 +598,26 @@ function renderDashboardAlerts() {
   container.innerHTML = alerts.length
     ? alerts.map((alert) => {
         const isRed = alert.zone === "RED";
-        const borderClass = isRed ? "red-border" : "yellow-border";
-        const timeStr = new Date(alert.createdAt).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false });
+        // เพิ่ม Class สำหรับสีขอบ และ Class สำหรับสีพื้นหลัง
+        const borderClass = isRed ? "alert-red" : "alert-yellow";
+        const bgClass = isRed ? "bg-red-alert" : "bg-yellow-alert";
         
         return `
-          <article class="alert-item ${borderClass}">
-            <div class="status-dot"></div>
+          <article class="alert-item ${borderClass} ${bgClass}">
+            <div class="time-dot-col">
+                <span class="alert-time">${new Date(alert.createdAt).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })}</span>
+                <div class="status-dot"></div>
+            </div>
             <div class="alert-info">
               <strong>${alert.zone} ZONE | HN ${escapeHtml(alert.hn || "-")} | ${escapeHtml(alert.dx || "-")}</strong>
               <small>${alert.score} คะแนน | ${escapeHtml(alert.district || "-")} | ${escapeHtml(alert.status || "-")}</small>
             </div>
             <div class="alert-timestamp">
-              ${formatThaiDateTime(alert.createdAt)}
-            </div>
+              ${formatThaiDateTime(alert.createdAt).split(' ')[0]} </div>
           </article>
         `;
       }).join("")
-    : `<div style="text-align:center; padding:1rem; color:#64748b;">ไม่พบรายการแจ้งเตือน</div>`;
+    : `<div class="muted-box" style="text-align:center; padding:1rem;">ไม่พบรายการแจ้งเตือน</div>`;
 }
 
 // ---------------------------------------------
