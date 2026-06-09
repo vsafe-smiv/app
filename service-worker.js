@@ -1,11 +1,11 @@
-const CACHE_NAME = "v-safe-pwa-v14";
+const CACHE_NAME = "v-safe-pwa-v16";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./admin.html",
   "./styles.css?v=13",
-  "./app.js?v=13",
-  "./admin.js?v=14",
+  "./app.js?v=15",
+  "./admin.js?v=16",
   "./manifest.webmanifest",
   "./VSAFE.png",
   "./VSAFE2.png",
@@ -34,17 +34,20 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   if (request.method !== "GET") return;
+  const url = new URL(request.url);
+
+  if (url.hostname === "script.google.com" || url.hostname === "script.googleusercontent.com") {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request)
+    fetch(request)
         .then((response) => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           return response;
         })
-        .catch(() => caches.match("./index.html"));
-    })
+      .catch(() => caches.match(request).then((cached) => cached || caches.match("./index.html")))
   );
 });
