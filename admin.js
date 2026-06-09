@@ -1018,12 +1018,26 @@ function showPatientDetail(patientCode) {
   `);
 }
 
+function escapeHtml(unsafe) {
+  if (!unsafe) return "";
+  return String(unsafe)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function renderCaseManagerTable() {
   const tbody = document.querySelector("#caseManagerRows");
   if (!tbody) return;
-  const caseManagers = storage.get("caseManagers", []).sort((a, b) => String(a.district || "").localeCompare(String(b.district || ""), "th"));
-  tbody.innerHTML = caseManagers.length
-    ? caseManagers.map((cm) => `
+  
+  // ดึงข้อมูลและป้องกันกรณีเป็น null
+  const caseManagers = storage.get("caseManagers") || [];
+  const sortedCaseManagers = caseManagers.sort((a, b) => String(a.district || "").localeCompare(String(b.district || ""), "th"));
+  
+  tbody.innerHTML = sortedCaseManagers.length
+    ? sortedCaseManagers.map((cm) => `
         <tr>
           <td><strong>${escapeHtml(cm.workplace || "-")}</strong></td>
           <td>อ.${escapeHtml(cm.district || "-")}, จ.${escapeHtml(cm.province || "-")}</td>
@@ -1037,7 +1051,8 @@ function renderCaseManagerTable() {
           </td>
         </tr>
       `).join("")
-    : `<tr><td colspan="4"><div class="muted-box">ยังไม่มีข้อมูลโรงพยาบาลในพื้นที่</div></td></tr>`;
+    : `<tr><td colspan="4"><div class="muted-box" style="text-align:center; padding:1.5rem;">ยังไม่มีข้อมูลโรงพยาบาลในพื้นที่</div></td></tr>`;
+    
   tbody.querySelectorAll("[data-view-cm]").forEach((btn) => btn.addEventListener("click", () => showCaseManagerDetail(btn.dataset.viewCm)));
   tbody.querySelectorAll("[data-edit-cm]").forEach((btn) => btn.addEventListener("click", () => {
     const cm = storage.get("caseManagers", []).find((item) => item.id === btn.dataset.editCm);
@@ -1071,13 +1086,19 @@ async function deleteCaseManager(id) {
   const cm = storage.get("caseManagers", []).find((item) => item.id === id);
   if (!cm) return;
   
-  // ใช้ await AppDialog.confirm แทน confirm เดิม
+  // ใช้ await รอให้แอดมินกดยืนยันจากกล่อง Popup ใหม่
   const confirmed = await AppDialog.confirm(`ต้องการลบข้อมูลของ ${cm.workplace || "โรงพยาบาลนี้"} (อ.${cm.district || "-"}) ใช่หรือไม่?`, "ยืนยันการลบ");
   if (!confirmed) return;
   
-  storage.set("caseManagers", storage.get("caseManagers", []).filter((item) => item.id !== id));
+  const updatedList = storage.get("caseManagers", []).filter((item) => item.id !== id);
+  storage.set("caseManagers", updatedList);
+  
+  // เรียก API ไปลบที่ฐานข้อมูล (ถ้าคุณมีฟังก์ชันลบฝั่ง API ให้ใส่ตรงนี้)
+  // await apiPost("deleteCaseManager", { id });
+  
   renderCaseManagerTable();
   renderDashboard();
+  AppDialog.alert("ลบข้อมูลโรงพยาบาลเรียบร้อยแล้ว", "สำเร็จ", "success");
 }
 
 function renderAdminPatientTable() {
@@ -1119,22 +1140,16 @@ async function deletePatientRecord(patientCode) {
   const patient = storage.get("patients", []).find((item) => item.patientCode === patientCode);
   if (!patient) return;
   
-  // ใช้ await AppDialog.confirm แทน confirm เดิม
+  // ใช้ await รอการยืนยัน
   const confirmed = await AppDialog.confirm(`ลบข้อมูลผู้ป่วย HN ${patient.hn || "-"} ใช่หรือไม่?`, "ยืนยันการลบ");
   if (!confirmed) return;
   
   storage.set("patients", storage.get("patients", []).filter((item) => item.patientCode !== patientCode));
   storage.set("assessments", storage.get("assessments", []).filter((item) => item.patientCode !== patientCode));
+  
   renderAdminPatientTable();
-
-function getCaregiversByPatient(patientCode) { return storage.get("caregivers", []).filter((c) => (c.patientCodes || []).includes(patientCode)); }
-function detailItem(label, value) { return `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "-")}</strong></article>`; }
-function showAdminDetail(html) {
-  const dialog = document.querySelector("#adminDetailDialog");
-  const content = document.querySelector("#adminDetailContent");
-  if (!dialog || !content) return;
-  content.innerHTML = html;
-  dialog.showModal();
+  renderDashboard();
+  AppDialog.alert("ลบข้อมูลผู้ป่วยเรียบร้อยแล้ว", "สำเร็จ", "success");
 }
 
 function renderAlertFeed() {
