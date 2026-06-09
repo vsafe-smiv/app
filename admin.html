@@ -10,6 +10,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="stylesheet" href="./styles.css?v=13" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
   </head>
   <body class="admin-body">
     <svg class="icon-sprite" aria-hidden="true">
@@ -107,12 +112,19 @@
             </section>
 
             <section style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-              <article class="monitor-card monitor-map-card" style="margin: 0; display: flex; flex-direction: column;">
-                <div class="monitor-card-head">
-                  <h3>แผนที่ผู้ป่วยแยกตามระดับความเสี่ยง</h3>
-                  <span>OpenStreetMap + พิกัดผู้ป่วย</span>
+              <article class="monitor-card monitor-map-card" style="margin: 0; display: flex; flex-direction: column; position: relative;">
+                <div class="monitor-card-head" style="display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <h3>แผนที่ผู้ป่วยแยกตามระดับความเสี่ยง</h3>
+                    <span>OpenStreetMap + พิกัดผู้ป่วยแบบ Interactive</span>
+                  </div>
+                  <button id="fullscreenMapBtn" type="button" style="background: white; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.4rem; cursor: pointer; color: #475569; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+                  </button>
                 </div>
-                <div id="riskMap" class="risk-map real-risk-map" aria-label="แผนที่จริง" style="flex: 1; min-height: 380px;"></div>
+                
+                <div id="riskMap" class="interactive-leaflet-map" style="flex: 1; min-height: 380px; width: 100%; z-index: 1;"></div>
+                
                 <div class="map-legend">
                   <span><i class="red"></i>RED ZONE</span>
                   <span><i class="yellow"></i>YELLOW ZONE</span>
