@@ -8,15 +8,24 @@ let selectedTrendYear = new Date().getFullYear();
 let currentPriorityPage = 1;
 const priorityItemsPerPage = 10;
 
-function initAdmin() {
+async function initAdmin() {
   if (!document.body.classList.contains("admin-body")) return;
+  
+  // ซิงค์ข้อมูลจากฐานข้อมูลก่อนเปิดหน้า Dashboard
+  await syncDataFromCloud();
+
   initLogin();
   initAdminNavigation();
   setupAddressSelects(document);
   initAdminForms();
   initClock();
   renderDashboard();
-  setInterval(renderDashboard, 30000);
+  
+  // เพิ่มการ Auto-Sync ทุกๆ 30 วินาที เพื่อให้ Dashboard อัปเดตข้อมูลล่าสุดเสมอ
+  setInterval(async () => {
+    await syncDataFromCloud();
+    renderDashboard();
+  }, 30000);
 }
 
 function initLogin() {
