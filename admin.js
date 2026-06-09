@@ -11,6 +11,25 @@ const priorityItemsPerPage = 10;
 async function initAdmin() {
   if (!document.body.classList.contains("admin-body")) return;
   
+  // จุดนี้จะทำการเรียกฟังก์ชันใน app.js เพื่อดึงทั้งข้อมูลผู้ป่วยและข้อมูล AddressData ลงเครื่องพร้อมกัน
+  await syncDataFromCloud(); 
+
+  initLogin();
+  initAdminNavigation();
+  
+  // ฟังก์ชันนี้ใน admin.js จะสามารถดึง storage.get("addressData") ไปใช้งานได้อย่างถูกต้อง
+  setupAddressSelects(document); 
+  initAdminForms();
+  initClock();
+  renderDashboard();
+  
+  // ระบบ Auto-Sync เบื้องหลังทุกๆ 30 วินาที จะอัปเดตข้อมูลที่อยู่ใหม่ๆ ตามไปด้วยเสมอ
+  setInterval(async () => {
+    await syncDataFromCloud();
+    renderDashboard();
+  }, 30000);
+}
+  
   // ซิงค์ข้อมูลจากฐานข้อมูลก่อนเปิดหน้า Dashboard
   await syncDataFromCloud();
 
