@@ -1,13 +1,14 @@
-const CACHE_NAME = "v-safe-pwa-v13";
+const CACHE_NAME = "v-safe-pwa-v14";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./admin.html",
   "./styles.css?v=13",
   "./app.js?v=13",
-  "./admin.js?v=13",
+  "./admin.js?v=14",
   "./manifest.webmanifest",
   "./VSAFE.png",
+  "./VSAFE2.png",
   "./icon%20app.png",
   "./nph%20logo.png",
   "./กรมสุขภาพจิต.png",
