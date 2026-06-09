@@ -1202,3 +1202,23 @@ async function acknowledgeSos(alertId) {
   renderAlertFeed();
   renderDashboardAlerts();
 }
+// ฟังก์ชันสำหรับค้นหาผู้ดูแลที่เชื่อมโยงกับรหัสผู้ป่วยนั้นๆ
+function getCaregiversByPatient(patientCode) {
+  const allCaregivers = storage.get("caregivers", []);
+  
+  return allCaregivers.filter(cg => {
+    let codes = cg.patientCodes;
+    
+    // จัดการกรณีข้อมูลเป็น JSON string (เผื่อดึงมาจาก Google Sheets แล้วติด String มา)
+    if (typeof codes === 'string') {
+      try {
+        codes = JSON.parse(codes);
+      } catch (e) {
+        codes = [];
+      }
+    }
+    
+    // ตรวจสอบว่ามี patientCode นี้อยู่ในรายการหรือไม่
+    return Array.isArray(codes) && codes.includes(patientCode);
+  });
+}
