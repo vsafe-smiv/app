@@ -154,6 +154,7 @@ const addressData = [
 
 let registerDraftPatients = [];
 let selectedPatientDetailCode = null;
+let userAppInitialized = false;
 
 const knowledgeItems = [
   ["การสื่อสารเชิงบวก", "ใช้น้ำเสียงสงบ ประโยคสั้น รับฟังก่อนแนะนำ และหลีกเลี่ยงการตำหนิ"],
@@ -237,8 +238,9 @@ async function syncDataFromCloud() {
     const response = await fetch(`${VSAFE_GAS_URL}?action=getAllData`);
     const data = await response.json();
     if (data.ok) {
-      storage.set("patients", data.patients || []);
+      storage.set("patients", mergeLatestAssessmentsIntoPatients(data.patients || [], data.assessments || []));
       storage.set("caregivers", data.caregivers || []);
+      storage.set("caseManagers", data.caseManagers || []);
       storage.set("assessments", data.assessments || []);
       storage.set("alerts", data.alerts || []);
       
@@ -260,12 +262,24 @@ async function apiPost(action, payload) {
     const body = new URLSearchParams({ action, payload: JSON.stringify(payload) });
     const response = await fetch(VSAFE_GAS_URL, { method: "POST", body });
     const result = await response.json();
-    syncDataFromCloud(); 
+    if (!result.ok) {
+      throw new Error(result.error || result.message || "Cloud save failed");
+    }
+    await syncDataFromCloud();
     return result;
   } catch (error) {
-    console.info("V-SAFE Offline Mode: ข้อมูลถูกบันทึกลง Local ชั่วคราว", error.message);
-    return { ok: true, offline: true };
+    console.error("V-SAFE Cloud Save Failed:", error.message);
+    return { ok: false, error: error.message };
   }
+}
+
+async function saveToCloudOrAlert(action, payload, message = "ไม่สามารถบันทึกข้อมูลลงฐานข้อมูลจริงได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่") {
+  const result = await apiPost(action, payload);
+  if (!result.ok) {
+    await AppDialog.alert(`${message}\n\nรายละเอียด: ${result.error || "ไม่ทราบสาเหตุ"}`, "บันทึกไม่สำเร็จ", "warning");
+    return false;
+  }
+  return true;
 }
 
 async function apiGet(action, params = {}) {
@@ -303,7 +317,7 @@ function updateCurrentCaregiver(updates) {
   const caregivers = getCaregivers();
   const index = caregivers.findIndex((caregiver) => caregiver.id === current.id);
   if (index < 0) return null;
-  caregivers[index] = { ...caregivers[index], ...updates, updatedAt: new Date().toISOString() };
+  caregivers[index] = { ...caregivers[index], ...updates, updatedAt: thaiTimestamp() };
   saveCaregivers(caregivers);
   return caregivers[index];
 }
@@ -347,7 +361,71 @@ function getLinkedAssessments() {
   return storage.get("assessments", []).filter((assessment) => codes.has(assessment.patientCode));
 }
 
-function makeAssessment(patient, score, zone, createdAt = new Date().toISOString(), answers = {}) {
+function thaiTimestamp(date = new Date()) {
+  const source = date instanceof Date ? date : new Date(date);
+  const safeDate = Number.isNaN(source.getTime()) ? new Date() : source;
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+    hourCycle: "h23"
+  }).formatToParts(safeDate).reduce((acc, part) => {
+    if (part.type !== "literal") acc[part.type] = part.value;
+    return acc;
+  }, {});
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}:${parts.second}+07:00`;
+}
+
+function timestampMs(value) {
+  const ms = new Date(value).getTime();
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+function getLatestAssessment(patientCode, assessments = storage.get("assessments", [])) {
+  const normalizedCode = normalizePatientCode(patientCode);
+  return assessments
+    .filter((assessment) => normalizePatientCode(assessment.patientCode) === normalizedCode)
+    .sort((a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt))[0] || null;
+}
+
+function riskStatusByZone(zone) {
+  if (zone === "RED") return "รอการติดต่อ";
+  if (zone === "YELLOW") return "เฝ้าระวัง";
+  return "ติดตามต่อเนื่อง";
+}
+
+function getPatientRiskSummary(patient, assessments = storage.get("assessments", [])) {
+  const latest = getLatestAssessment(patient?.patientCode, assessments);
+  const score = Number(latest?.score ?? patient?.lastScore ?? patient?.baselineScore ?? 0);
+  const zone = latest?.zone || patient?.lastZone || classifyRisk(score);
+  return {
+    score,
+    zone,
+    status: latest?.status || patient?.status || riskStatusByZone(zone),
+    latest,
+    updatedAt: latest?.createdAt || patient?.updatedAt || patient?.createdAt || thaiTimestamp()
+  };
+}
+
+function mergeLatestAssessmentsIntoPatients(patients = [], assessments = []) {
+  return patients.map((patient) => {
+    const summary = getPatientRiskSummary(patient, assessments);
+    return {
+      ...patient,
+      lastScore: summary.score,
+      lastZone: summary.zone,
+      status: summary.status,
+      updatedAt: summary.updatedAt
+    };
+  });
+}
+
+function makeAssessment(patient, score, zone, createdAt = thaiTimestamp(), answers = {}) {
   return {
     id: `AS-${Date.now()}-${Math.random().toString(16).slice(2, 7)}`,
     patientCode: patient.patientCode,
@@ -375,10 +453,13 @@ function zoneClass(zone) {
 }
 
 function formatThaiDateTime(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
   return new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
     dateStyle: "medium",
     timeStyle: "short"
-  }).format(new Date(value));
+  }).format(date);
 }
 
 function calculateAge(dob) {
@@ -643,12 +724,10 @@ function initAuthFlow() {
       addressLine: payload.addressLine,
       patientCodes: registerDraftPatients.map((patient) => patient.patientCode),
       activePatientCode: registerDraftPatients[0].patientCode,
-      createdAt: new Date().toISOString()
+      createdAt: thaiTimestamp()
     };
-    const caregivers = getCaregivers();
-    caregivers.push(caregiver);
-    saveCaregivers(caregivers);
-    apiPost("saveCaregiver", caregiver);
+    const saved = await saveToCloudOrAlert("saveCaregiver", caregiver, "ไม่สามารถสร้างบัญชีผู้ดูแลในฐานข้อมูลจริงได้");
+    if (!saved) return;
     registerDraftPatients = [];
     renderDraftPatients();
     setCurrentCaregiver(caregiver);
@@ -739,7 +818,6 @@ async function addDraftPatientFromInput() {
   const patient = await lookupPatientToPreview("#authPatientCodeLookup", "#authPatientPreview");
   if (!patient) return null;
   const reviewedPatient = patientFromEdit(patient);
-  upsertPatient(reviewedPatient);
   if (registerDraftPatients.some((item) => item.patientCode === reviewedPatient.patientCode)) {
     AppDialog.alert("ผู้ป่วยรายนี้ถูกเพิ่มแล้ว", "ข้อมูลซ้ำ", "info");
     return reviewedPatient;
@@ -820,8 +898,7 @@ function renderPatientPanels() {
   const homeHtml = linked.length
     ? linked
         .map((patient, index) => {
-          const score = Number(patient.lastScore ?? patient.baselineScore ?? 0);
-          const zone = patient.lastZone || classifyRisk(score);
+          const { score, zone } = getPatientRiskSummary(patient);
           const isActive = active?.patientCode === patient.patientCode;
           
           let statusColor = "#34c759";
@@ -862,8 +939,7 @@ function renderPatientPanels() {
   const linkedHtml = linked.length
     ? linked
         .map((patient, index) => {
-          const score = Number(patient.lastScore ?? patient.baselineScore ?? 0);
-          const zone = patient.lastZone || classifyRisk(score);
+          const { score, zone } = getPatientRiskSummary(patient);
           const isActive = active?.patientCode === patient.patientCode;
           return `
             <button class="patient-card ${isActive ? "active" : ""}" data-active-patient="${escapeHtml(patient.patientCode)}" type="button">
@@ -923,11 +999,7 @@ function renderPatientDetailPanel() {
     panel.innerHTML = "";
     return;
   }
-  const score = Number(patient.lastScore ?? patient.baselineScore ?? 0);
-  const zone = patient.lastZone || classifyRisk(score);
-  const latest = getLinkedAssessments()
-    .filter((assessment) => assessment.patientCode === patient.patientCode)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+  const { score, zone, latest } = getPatientRiskSummary(patient, getLinkedAssessments());
   const cm = findCaseManager(patient.district);
   panel.classList.remove("hidden");
   panel.innerHTML = `
@@ -1005,12 +1077,16 @@ function initRegisterForm() {
     AppDialog.alert("เพิ่มผู้ป่วยได้สูงสุด 3 คนต่อบัญชี", "จำกัดจำนวน", "warning");
     return;
   }
-    const updated = updateCurrentCaregiver({
+    const updated = {
+      ...caregiver,
       ...payload,
       patientCodes: [...patientCodes, patient.patientCode],
       activePatientCode: patient.patientCode
-    });
-    apiPost("saveCaregiver", updated);
+    };
+    updated.updatedAt = thaiTimestamp();
+    const saved = await saveToCloudOrAlert("saveCaregiver", updated, "ไม่สามารถเพิ่มผู้ป่วยเข้าบัญชีในฐานข้อมูลจริงได้");
+    if (!saved) return;
+    storage.set("currentCaregiverId", updated.id);
     event.currentTarget.reset();
     prefillCaregiverForm(updated);
     renderPatientPanels();
@@ -1077,47 +1153,31 @@ function initAssessmentForm() {
     return sum + value;
   }, 0);
 
+    const baselineScore = Number(patient.baselineScore || 0);
     const finalScore = rawScore + baselineScore; // รวมคะแนนฐานเดิม
     const zone = classifyRisk(finalScore);
     
     console.log(`ประเมินสำเร็จ: Raw ${rawScore} + Baseline ${baselineScore} = Total ${finalScore} (${zone})`);
 
     // 3. สร้างข้อมูลการประเมิน
-    const assessment = makeAssessment(patient, finalScore, zone, new Date().toISOString(), answers);
+    const assessment = makeAssessment(patient, finalScore, zone, thaiTimestamp(), answers);
 
-    // 4. บันทึกข้อมูลลง Local Storage
-    const assessments = storage.get("assessments", []);
-    assessments.push(assessment);
-    storage.set("assessments", assessments);
+    // 4. บันทึกลงฐานข้อมูลจริงก่อน แล้วค่อย sync กลับมาแสดงผล
+    const assessmentSaved = await saveToCloudOrAlert("saveAssessment", assessment, "ไม่สามารถบันทึกผลประเมินลงฐานข้อมูลจริงได้");
+    if (!assessmentSaved) return;
 
-    const patients = storage.get("patients", []);
-    const index = patients.findIndex((item) => item.patientCode === patientCode);
-    if (index >= 0) {
-      patients[index] = { 
-        ...patients[index], 
-        lastScore: finalScore, 
-        lastZone: zone, 
-        status: assessment.status, 
-        updatedAt: assessment.createdAt 
-      };
-      storage.set("patients", patients);
-    }
-
-    // 5. แจ้งเตือน SOS (เฉพาะ RED ZONE เท่านั้น)
+    // 5. แจ้งเตือน (เฉพาะ RED ZONE เท่านั้น)
     if (zone === "RED") {
-      const alerts = storage.get("alerts", []);
-      alerts.unshift({ 
+      const alertRecord = { 
         ...assessment, 
         alertId: `ALT-${Date.now()}`, 
         acknowledged: false 
-      });
-      storage.set("alerts", alerts);
-      // ส่งข้อมูลเข้าเซิร์ฟเวอร์หลังบ้าน (ถ้าต้องการให้แอดมินเห็น)
-      await apiPost("saveAlert", assessment);
+      };
+      const alertSaved = await saveToCloudOrAlert("saveAlert", alertRecord, "บันทึกผลประเมินแล้ว แต่ไม่สามารถบันทึกแจ้งเตือน RED ZONE ลงฐานข้อมูลจริงได้");
+      if (!alertSaved) return;
     }
 
     // 6. จบการทำงาน
-    await apiPost("saveAssessment", assessment);
     setActivePatient(patientCode);
     showResultDialog(assessment);
     renderHomeNextAssessment();
@@ -1229,7 +1289,7 @@ function renderHomeNextAssessment() {
 
   const assessments = getLinkedAssessments()
     .filter((assessment) => assessment.patientCode === active.patientCode)
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    .sort((a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt));
 
   if (!assessments.length) {
     dateTarget.textContent = "ประเมินทันที";
@@ -1341,7 +1401,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function renderHistory() {
   const container = document.querySelector("#historyList");
   if (!container) return;
-  const assessments = getLinkedAssessments().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const assessments = getLinkedAssessments().sort((a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt));
   container.innerHTML = assessments.length
     ? assessments
         .map(
@@ -1432,21 +1492,20 @@ function initSosButtons() {
     return;
   }
     const cm = findCaseManager(latestPatient?.district);
-    const alerts = storage.get("alerts", []);
-    alerts.unshift({
+    const alertRecord = {
       alertId: `SOS-${Date.now()}`,
       patientCode: latestPatient?.patientCode || "",
       hn: latestPatient?.hn || "",
       dx: latestPatient?.dx || "",
       district: latestPatient?.district || "",
-      score: latestPatient?.lastScore || latestPatient?.baselineScore || 0,
+      score: getPatientRiskSummary(latestPatient).score,
       zone: "RED",
       status: "รอการช่วยเหลือ",
-      createdAt: new Date().toISOString(),
+      createdAt: thaiTimestamp(),
       acknowledged: false
-    });
-    storage.set("alerts", alerts);
-    await apiPost("saveAlert", alerts[0]);
+    };
+    const saved = await saveToCloudOrAlert("saveAlert", alertRecord, "ไม่สามารถบันทึก SOS ลงฐานข้อมูลจริงได้");
+    if (!saved) return;
     window.location.href = `tel:${cm?.phone || "1669"}`;
   });
 }
@@ -1463,6 +1522,8 @@ function registerServiceWorker() {
 async function initUserApp() {
   // 1. ตรวจสอบก่อนว่าใช่หน้า User หรือไม่
   if (!document.body.classList.contains("user-app")) return;
+  if (userAppInitialized) return;
+  userAppInitialized = true;
   
   try {
     // 2. สั่งซิงค์ข้อมูลจาก Cloud ก่อนเสมอ (สำคัญมาก: ห้ามข้ามขั้นตอนนี้)
@@ -1480,8 +1541,6 @@ async function initUserApp() {
     const regForm = document.querySelector("#registerAccountForm");
     if (regForm) setupUserAddressSelects(regForm);
     
-    initAuthFlow();
-
     // 5. โหลดส่วนประกอบของหน้าจอ
     initRegisterForm();
     renderAssessmentItems();
@@ -1498,8 +1557,6 @@ async function initUserApp() {
 }
 
 // ผูกฟังก์ชันเข้ากับหน้าเว็บ
-document.addEventListener("DOMContentLoaded", initUserApp);
-
 document.addEventListener("DOMContentLoaded", initUserApp);
 
 // ==========================================
