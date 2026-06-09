@@ -267,7 +267,7 @@
                 <h3>ทะเบียนผู้ป่วย</h3>
                 <span>รายการผู้ป่วยที่ลงทะเบียนไว้ในระบบ V-SAFE</span>
               </div>
-              <button id="patientFormTitle" class="primary-btn" type="button">ลงทะเบียนผู้ป่วยใหม่</button>
+              <button id="openPatientForm" class="primary-btn" type="button">ลงทะเบียนผู้ป่วยใหม่</button>
             </div>
             <div class="table-wrap">
               <table class="admin-data-table patient-registry-table">
@@ -292,9 +292,9 @@
             <div class="admin-section-head compact">
               <div>
                 <p class="eyebrow">Register</p>
-                <h3 id="patientFormTitle">ลงทะเบียนผู้ป่วย</h3>
+                <h3 id="patientFormHeading">ลงทะเบียนผู้ป่วย</h3>
               </div>
-              <button class="secondary-btn" id="cancelCaseManagerForm" type="button">ปิดฟอร์ม</button>
+              <button class="secondary-btn" id="cancelPatientForm" type="button">ปิดฟอร์ม</button>
             </div>
             <form id="patientForm" class="stack-form">
               <input name="editingKey" type="hidden" />
@@ -410,6 +410,6 @@
     </dialog>
 
     <script src="./app.js?v=13"></script>
-    <script src="./admin.js?v=13"></script>
+    <script src="./admin.js?v=14"></script>
   </body>
 </html>
