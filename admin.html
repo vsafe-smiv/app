@@ -367,27 +367,33 @@
                 </label>
               </div>
               <div class="field-grid three">
+                <div class="field-grid two">
+                <label>บ้านเลขที่
+                  <input name="houseNo" placeholder="เลขที่บ้าน / อาคาร" required />
+                </label>
+                <label>หมู่ที่
+                  <input name="moo" placeholder="ใส่เฉพาะตัวเลข (ถ้ามี)" />
+                </label>
+              </div>
+              <div class="field-grid two">
+                <label>ชื่อหมู่บ้าน / ชุมชน
+                  <input name="villageName" placeholder="ชื่อหมู่บ้านหรือชื่อชุมชน" />
+                </label>
+                <label>ถนน / ซอย
+                  <input name="road" placeholder="ชื่อถนน หรือชื่อซอย (ถ้ามี)" />
+                </label>
+              </div>
+              <div class="field-grid three">
                 <label>รหัสไปรษณีย์
                   <input name="zipcode" class="adminZipcode" inputmode="numeric" readonly />
                 </label>
-                <div class="field-grid two">
-                  <label>บ้านเลขที่
-                    <input name="houseNo" placeholder="เลขที่บ้าน" />
-                  </label>
-                  <label>หมู่ที่
-                    <input name="moo" placeholder="หมู่ที่" />
-                  </label>
-                </div>
-                <div class="field-grid two">
-                  <label>ชื่อหมู่บ้าน / ชุมชน
-                    <input name="villageName" placeholder="เช่น หมู่บ้านสุขใจ" />
-                  </label>
-                  <label>ถนน / ซอย
-                    <input name="road" placeholder="เช่น ถ.สว่างแดนดิน" />
-                  </label>
-                </div>
-                <label>พิกัดโดยประมาณ
-                  <input name="latlng" class="adminLatLng" placeholder="ระบบคำนวณอัตโนมัติ" readonly />
+                <label>พิกัดละติจูด, ลองจิจูด
+                  <input name="latlng" class="adminLatLng" placeholder="คำนวณอัตโนมัติ หรือใช้ปุ่มขวา" readonly required />
+                </label>
+                <label style="justify-content: flex-end; display: flex; flex-direction: column;">&nbsp;
+                  <button type="button" class="secondary-btn" id="btnGetActualGPS" style="height: 42px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #0f766e; color: white;">
+                    📍 ดึงพิกัดปัจจุบัน
+                  </button>
                 </label>
               </div>
               <button class="primary-btn" type="submit">บันทึกผู้ป่วย</button>
