@@ -1835,6 +1835,13 @@ textarea:focus {
     margin-left: 1rem;
     text-align: right;
 }
+/* เพิ่มเติม: สีพื้นหลังสำหรับบล็อกแจ้งเตือน */
+.bg-red-alert { 
+    background: rgba(239, 68, 68, 0.15) !important; 
+}
+.bg-yellow-alert { 
+    background: rgba(245, 158, 11, 0.15) !important; 
+}
 
 .timeline-item {
   position: relative;
