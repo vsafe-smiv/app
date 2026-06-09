@@ -107,21 +107,33 @@ function initLogin() {
   const app = document.querySelector("#adminApp");
   const form = document.querySelector("#loginForm");
   const isLoggedIn = sessionStorage.getItem("vsafe:admin") === "1";
+  
   if (isLoggedIn) {
     login.classList.add("hidden");
     app.classList.remove("hidden");
   }
+  
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
     const data = new FormData(form);
-    if (data.get("user") === "14171" && data.get("password") === "14171") {
+    
+    // แก้ไขเพิ่มความปลอดภัย: ดึงค่าได้ทั้งกรณีที่ HTML ตั้งชื่อว่า user หรือ username
+    const username = data.get("user") || data.get("username");
+    const password = data.get("password");
+    
+    if (username === "14171" && password === "14171") {
       sessionStorage.setItem("vsafe:admin", "1");
       login.classList.add("hidden");
       app.classList.remove("hidden");
       renderDashboard();
     } else {
-    AppDialog.alert("User หรือรหัสผ่านไม่ถูกต้อง", "เข้าสู่ระบบล้มเหลว", "warning");
-  }
+      // เปลี่ยนมาใช้กล่องข้อความเตือนสุดพรีเมียมตัวใหม่แทนการใช้ alert เดิมของบราวเซอร์
+      if (typeof AppDialog !== "undefined") {
+        AppDialog.alert("ชื่อผู้ใช้หรือรหัสผ่านระบบไม่ถูกต้อง", "เข้าสู่ระบบล้มเหลว", "warning");
+      } else {
+        alert("User หรือรหัสผ่านไม่ถูกต้อง");
+      }
+    }
   });
 }
 
