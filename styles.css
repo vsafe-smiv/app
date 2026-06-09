@@ -4017,3 +4017,17 @@ dialog::backdrop {
   margin: 0;
   line-height: 1.5;
 }
+/* สไตล์ปุ่มตำแหน่งปัจจุบัน */
+.locate-btn {
+    background: white;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 4px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+    transition: background 0.2s;
+}
+.locate-btn:hover { background: #f8f9fa; }
