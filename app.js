@@ -234,28 +234,23 @@ const storage = {
 
 async function syncDataFromCloud() {
   try {
-    console.log("กำลังซิงค์ข้อมูลจากฐานข้อมูลจริง...");
     const response = await fetch(`${VSAFE_GAS_URL}?action=getAllData`);
     const data = await response.json();
-    
     if (data.ok) {
       storage.set("patients", data.patients || []);
       storage.set("caregivers", data.caregivers || []);
-      storage.set("caseManagers", data.caseManagers || []);
       storage.set("assessments", data.assessments || []);
       storage.set("alerts", data.alerts || []);
       
-      // เพิ่มบรรทัดนี้ เพื่อบันทึกข้อมูลตารางที่อยู่จริงจาก Google Sheets ลง Cache ของเครื่อง
+      // ส่วนสำคัญ: บันทึกข้อมูลที่อยู่จริงที่ดึงมาจากชีต AddressData
       storage.set("addressData", data.addressData || []); 
       
       console.log("ซิงค์ข้อมูลสำเร็จ!");
       return true;
-    } else {
-      console.error("ซิงค์ข้อมูลล้มเหลว:", data.message);
-      return false;
     }
+    return false;
   } catch (error) {
-    console.error("Network error ระหว่างการซิงค์:", error);
+    console.error("ซิงค์ข้อมูลล้มเหลว:", error);
     return false;
   }
 }
@@ -1466,22 +1461,44 @@ function registerServiceWorker() {
 // MAIN INITIALIZATION (Async/Await Cloud Sync)
 // ==========================================
 async function initUserApp() {
+  // 1. ตรวจสอบก่อนว่าใช่หน้า User หรือไม่
   if (!document.body.classList.contains("user-app")) return;
   
-  // ซิงค์ข้อมูลลงมาให้พร้อมก่อนเปิดแอป
-  await syncDataFromCloud();
-  
-  initNavigation();
-  setupAddressSelects();
-  initAuthFlow();
-  initRegisterForm();
-  renderAssessmentItems();
-  ();
-  renderKnowledge();
-  initSosButtons();
-  renderAuthenticatedApp();
-  registerServiceWorker();
+  try {
+    // 2. สั่งซิงค์ข้อมูลจาก Cloud ก่อนเสมอ (สำคัญมาก: ห้ามข้ามขั้นตอนนี้)
+    const synced = await syncDataFromCloud();
+    if (!synced) {
+      console.warn("ไม่สามารถเชื่อมต่อฐานข้อมูลได้ แต่จะใช้ข้อมูลเก่าในเครื่อง");
+    }
+
+    // 3. เริ่มต้นระบบ UI และ Navigation
+    initNavigation();
+    initAuthFlow();
+    
+    // 4. สั่งโหลดฟอร์มและข้อมูลที่อยู่จากฐานข้อมูลจริง
+    // ต้องเรียก setupUserAddressSelects หลังจาก sync ข้อมูลสำเร็จแล้วเท่านั้น
+    const registerForm = document.querySelector("#registerAccountForm");
+    if (registerForm) {
+       setupUserAddressSelects(registerForm); 
+    }
+
+    // 5. โหลดส่วนประกอบของหน้าจอ
+    initRegisterForm();
+    renderAssessmentItems();
+    renderKnowledge();
+    initSosButtons();
+    
+    // 6. แสดงผลหน้า Authenticated และปิดท้ายด้วย Service Worker
+    renderAuthenticatedApp();
+    registerServiceWorker();
+
+  } catch (error) {
+    console.error("เกิดข้อผิดพลาดในการเริ่มต้นแอป:", error);
+  }
 }
+
+// ผูกฟังก์ชันเข้ากับหน้าเว็บ
+document.addEventListener("DOMContentLoaded", initUserApp);
 
 document.addEventListener("DOMContentLoaded", initUserApp);
 
