@@ -120,8 +120,8 @@ function initLogin() {
       app.classList.remove("hidden");
       renderDashboard();
     } else {
-      alert("User หรือรหัสผ่านไม่ถูกต้อง");
-    }
+    AppDialog.alert("User หรือรหัสผ่านไม่ถูกต้อง", "เข้าสู่ระบบล้มเหลว", "warning");
+  }
   });
 }
 
@@ -218,7 +218,7 @@ function initAdminForms() {
     }
     storage.set("caseManagers", caseManagers);
     await apiPost("saveCaseManager", payload);
-    alert("บันทึกข้อมูลโรงพยาบาลแล้ว");
+    await AppDialog.alert("บันทึกข้อมูลโรงพยาบาลในพื้นที่เรียบร้อยแล้ว", "สำเร็จ", "success");
     form.reset();
     hideCaseManagerForm();
     setupAddressSelects(document);
@@ -242,7 +242,7 @@ function initAdminForms() {
     else patients.push({ ...payload, createdAt: new Date().toISOString() });
     storage.set("patients", patients);
     await apiPost("savePatient", payload);
-    alert("บันทึกผู้ป่วยแล้ว");
+    await AppDialog.alert("บันทึกข้อมูลผู้ป่วยเรียบร้อยแล้ว", "สำเร็จ", "success");
     form.reset();
     hidePatientForm();
     setupAddressSelects(document);
@@ -371,14 +371,17 @@ function initPatientAddressAutomation() {
   // ปุ่มกดรับพิกัดปัจจุบันจาก GPS สดของอุปกรณ์ ณ ขณะนั้น (สำหรับงานลงพื้นที่)
   document.querySelector("#btnGetActualGPS")?.addEventListener("click", () => {
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        form.elements.latlng.value = `${position.coords.latitude.toFixed(5)},${position.coords.longitude.toFixed(5)}`;
-        alert("ดึงพิกัดจริงแม่นยำจาก GPS สำเร็จ!");
-      }, () => {
-        alert("ไม่สามารถดึง GPS ได้ กรุณาตรวจสอบสิทธิ์การเข้าถึงพิกัดบนอุปกรณ์");
-      });
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          form.elements.latlng.value = `${position.coords.latitude.toFixed(5)},${position.coords.longitude.toFixed(5)}`;
+          AppDialog.alert("ดึงพิกัดจาก GPS เรียบร้อยแล้ว", "สำเร็จ", "success");
+        }, 
+        () => {
+          AppDialog.alert("ไม่สามารถดึง GPS ได้ กรุณาตรวจสอบสิทธิ์การเข้าถึงพิกัดบนอุปกรณ์", "ข้อผิดพลาด", "warning");
+        }
+      );
     } else {
-      alert("อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับระบบ Geolocation");
+      AppDialog.alert("อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับระบบ Geolocation", "ข้อผิดพลาด", "warning");
     }
   });
 }
@@ -1064,10 +1067,14 @@ function showCaseManagerDetail(id) {
   `);
 }
 
-function deleteCaseManager(id) {
+async function deleteCaseManager(id) {
   const cm = storage.get("caseManagers", []).find((item) => item.id === id);
   if (!cm) return;
-  if (!confirm(`ต้องการลบข้อมูลของ ${cm.workplace || "โรงพยาบาลนี้"} (อ.${cm.district || "-"}) ใช่หรือไม่?`)) return;
+  
+  // ใช้ await AppDialog.confirm แทน confirm เดิม
+  const confirmed = await AppDialog.confirm(`ต้องการลบข้อมูลของ ${cm.workplace || "โรงพยาบาลนี้"} (อ.${cm.district || "-"}) ใช่หรือไม่?`, "ยืนยันการลบ");
+  if (!confirmed) return;
+  
   storage.set("caseManagers", storage.get("caseManagers", []).filter((item) => item.id !== id));
   renderCaseManagerTable();
   renderDashboard();
@@ -1108,15 +1115,17 @@ function renderAdminPatientTable() {
   tbody.querySelectorAll("[data-delete-admin-patient]").forEach((btn) => btn.addEventListener("click", () => deletePatientRecord(btn.dataset.deleteAdminPatient)));
 }
 
-function deletePatientRecord(patientCode) {
+async function deletePatientRecord(patientCode) {
   const patient = storage.get("patients", []).find((item) => item.patientCode === patientCode);
   if (!patient) return;
-  if (!confirm(`ลบข้อมูลผู้ป่วย HN ${patient.hn || "-"} ใช่หรือไม่?`)) return;
+  
+  // ใช้ await AppDialog.confirm แทน confirm เดิม
+  const confirmed = await AppDialog.confirm(`ลบข้อมูลผู้ป่วย HN ${patient.hn || "-"} ใช่หรือไม่?`, "ยืนยันการลบ");
+  if (!confirmed) return;
+  
   storage.set("patients", storage.get("patients", []).filter((item) => item.patientCode !== patientCode));
   storage.set("assessments", storage.get("assessments", []).filter((item) => item.patientCode !== patientCode));
   renderAdminPatientTable();
-  renderDashboard();
-}
 
 function getCaregiversByPatient(patientCode) { return storage.get("caregivers", []).filter((c) => (c.patientCodes || []).includes(patientCode)); }
 function detailItem(label, value) { return `<article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "-")}</strong></article>`; }
