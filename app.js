@@ -260,6 +260,7 @@ async function syncDataFromCloud() {
   }
 }
 
+
 async function apiPost(action, payload) {
   try {
     const body = new URLSearchParams({ action, payload: JSON.stringify(payload) });
@@ -282,6 +283,135 @@ async function apiGet(action, params = {}) {
     return await response.json();
   } catch {
     return { ok: false };
+  }
+}
+// =========================================================
+// ระบบดรอปดาวน์ที่อยู่ขั้นตอนที่ 5 สำหรับหน้าผู้ใช้ (index)
+// ดึงข้อมูลจริงจาก AddressData (province, amphoe, tambon, zipcode)
+// =========================================================
+function setupUserAddressSelects(formScope = document) {
+  // ค้นหา select ตาม name ในฟอร์มลงทะเบียนขั้นตอนที่ 5
+  const provinceSelect = formScope.querySelector('select[name="province"]');
+  const districtSelect = formScope.querySelector('select[name="district"]');
+  const subdistrictSelect = formScope.querySelector('select[name="subdistrict"]');
+  const zipcodeInput = formScope.querySelector('input[name="zipcode"]');
+
+  if (!provinceSelect) return;
+
+  // ดึงข้อมูลจากคลาวด์แครชที่ซิงค์มาจากฐานข้อมูลจริง
+  const addressList = storage.get("addressData") || [];
+
+  if (addressList.length === 0) {
+    console.warn("ไม่พบข้อมูล AddressData ในระบบพื้นที่");
+    return;
+  }
+
+  // 1. โหลดรายการจังหวัดทั้งหมด (แบบไม่ซ้ำ)
+  const uniqueProvinces = [...new Set(addressList.map(item => item.province))].filter(Boolean).sort();
+  provinceSelect.innerHTML = '<option value="">-- เลือกจังหวัด --</option>' + 
+    uniqueProvinces.map(p => `<option value="${p}">${p}</option>`).join("");
+
+  // 2. ฟังก์ชันอัปเดตรายการอำเภอเมื่อเลือกจังหวัด
+  const refreshDistricts = () => {
+    if (!districtSelect) return;
+    const selectedProvince = provinceSelect.value;
+    
+    if (!selectedProvince) {
+      districtSelect.innerHTML = '<option value="">-- เลือกอำเภอ --</option>';
+      if (subdistrictSelect) subdistrictSelect.innerHTML = '<option value="">-- เลือกตำบล --</option>';
+      if (zipcodeInput) zipcodeInput.value = '';
+      return;
+    }
+
+    const filtered = addressList.filter(item => item.province === selectedProvince);
+    const uniqueAmphoes = [...new Set(filtered.map(item => item.amphoe))].filter(Boolean).sort();
+    
+    districtSelect.innerHTML = '<option value="">-- เลือกอำเภอ --</option>' +
+      uniqueAmphoes.map(a => `<option value="${a}">${a}</option>`).join("");
+    
+    refreshSubdistricts();
+  };
+
+  // 3. ฟังก์ชันอัปเดตรายการตำบลเมื่อเลือกอำเภอ
+  const refreshSubdistricts = () => {
+    if (!subdistrictSelect) return;
+    const selectedProvince = provinceSelect.value;
+    const selectedAmphoe = districtSelect.value;
+
+    if (!selectedAmphoe) {
+      subdistrictSelect.innerHTML = '<option value="">-- เลือกตำบล --</option>';
+      if (zipcodeInput) zipcodeInput.value = '';
+      return;
+    }
+
+    const filtered = addressList.filter(item => item.province === selectedProvince && item.amphoe === selectedAmphoe);
+    const uniqueTambons = [...new Set(filtered.map(item => item.tambon))].filter(Boolean).sort();
+    
+    subdistrictSelect.innerHTML = '<option value="">-- เลือกตำบล --</option>' +
+      uniqueTambons.map(t => `<option value="${t}">${t}</option>`).join("");
+    
+    // ตั้งค่ารหัสไปรษณีย์ตัวแรกเริ่มต้น
+    if (zipcodeInput && filtered.length > 0) {
+      zipcodeInput.value = filtered[0].zipcode || "";
+    }
+  };
+
+  // ผ่วิธีดักจับเหตุการณ์ (Event Listeners)
+  provinceSelect.addEventListener("change", refreshDistricts);
+  districtSelect?.addEventListener("change", refreshSubdistricts);
+  
+  subdistrictSelect?.addEventListener("change", () => {
+    const selectedProvince = provinceSelect.value;
+    const selectedAmphoe = districtSelect.value;
+    const selectedTambon = subdistrictSelect.value;
+    
+    const match = addressList.find(item => 
+      item.province === selectedProvince && 
+      item.amphoe === selectedAmphoe && 
+      item.tambon === selectedTambon
+    );
+    
+    if (zipcodeInput && match) {
+      zipcodeInput.value = match.zipcode || "";
+    }
+  });
+
+  // ทำการรีเฟรชค่าตั้งต้น
+  refreshDistricts();
+}
+
+// =========================================================
+// ฟังก์ชันเติมค่าที่อยู่เดิมของผู้ป่วยกรณีแก้ไขข้อมูล (Edit Mode)
+// =========================================================
+function setUserAddressFormValues(formElement, patientData) {
+  if (!formElement || !patientData) return;
+
+  const provinceSelect = formElement.querySelector('select[name="province"]');
+  const districtSelect = formElement.querySelector('select[name="district"]');
+  const subdistrictSelect = formElement.querySelector('select[name="subdistrict"]');
+  const zipcodeInput = formElement.querySelector('input[name="zipcode"]');
+
+  if (!provinceSelect) return;
+
+  // 1. กำหนดค่าจังหวัด และกระตุ้น Event change เพื่อให้โหลดอำเภอ
+  provinceSelect.value = patientData.province || "";
+  provinceSelect.dispatchEvent(new Event("change"));
+
+  // 2. กำหนดค่าอำเภอ และกระตุ้น Event change เพื่อให้โหลดตำบล
+  if (districtSelect && patientData.district) {
+    districtSelect.value = patientData.district;
+    districtSelect.dispatchEvent(new Event("change"));
+  }
+
+  // 3. กำหนดค่าตำบล
+  if (subdistrictSelect && patientData.subdistrict) {
+    subdistrictSelect.value = patientData.subdistrict;
+    subdistrictSelect.dispatchEvent(new Event("change"));
+  }
+
+  // 4. กำหนดค่ารหัสไปรษณีย์
+  if (zipcodeInput && patientData.zipcode) {
+    zipcodeInput.value = patientData.zipcode;
   }
 }
 
