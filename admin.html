@@ -46,7 +46,7 @@
             <img src="./icon%20app.png" alt="V-SAFE" class="brand-mark" />
             <div class="sidebar-brand-text">
               <h1>V-SAFE</h1>
-              <p>ER Monitor</p>
+              <p>Admin Monitor</p>
             </div>
           </div>
           <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="ซ่อน/แสดงเมนู"><svg><use href="#i-menu"></use></svg></button>
@@ -63,7 +63,7 @@
       <main class="admin-main">
         <header class="admin-topbar">
           <div>
-            <p class="eyebrow">งานอุบัติเหตุฉุกเฉินและคัดกรอง</p>
+            <p class="eyebrow">ระบบเฝ้าระวังและช่วยเหลือผู้ป่วยจิตเวชกลุ่มเสี่ยงและครอบครัว</p>
             <h2>ER Psychiatric Monitoring Center</h2>
             <span class="topbar-subtitle">Area-based Psychiatric Emergency Linkage System</span>
           </div>
@@ -75,6 +75,7 @@
 
         <section id="admin-view-dashboard" class="admin-view active">
           <div class="monitor-board">
+            
             <header class="monitor-hero">
               <div class="monitor-brand">
                 <img src="./icon%20app.png" alt="V-SAFE" />
@@ -84,8 +85,8 @@
                 </div>
               </div>
               <div class="monitor-title">
-                <h2>ระบบติดตามและเฝ้าระวังความเสี่ยงผู้ป่วยจิตเวช (V-SAFE)</h2>
-                <p>ศูนย์ Monitor ER Psychiatric Monitoring Center</p>
+                <h2>ระบบติดตามและเฝ้าระวังความเสี่ยงผู้ป่วยจิตเวช</h2>
+                <p>Psychiatric Monitoring Center</p>
                 <span>โรงพยาบาลจิตเวชนครสวรรค์ราชนครินทร์</span>
               </div>
               <img class="monitor-logo" src="./nph%20logo.png" alt="โรงพยาบาลจิตเวชนครสวรรค์ราชนครินทร์" />
@@ -105,64 +106,24 @@
               <div id="overviewCards" class="overview-grid monitor-overview"></div>
             </section>
 
-            <section class="monitor-top-grid">
-              <article class="monitor-card trend-card">
+            <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+              
+              <article class="monitor-card trend-card" style="margin: 0; display: flex; flex-direction: column;">
                 <div class="monitor-card-head">
                   <h3>แนวโน้มจำนวนผู้ป่วยแยกตามระดับความเสี่ยง</h3>
                   <span>7 วันล่าสุด</span>
                 </div>
-                <canvas id="trendCanvas" width="900" height="320"></canvas>
+                <div style="flex: 1; min-height: 320px; position: relative;">
+                  <canvas id="trendCanvas" style="width: 100%; height: 100%; position: absolute; inset: 0;"></canvas>
+                </div>
               </article>
 
-              <article class="monitor-card">
-                <div class="monitor-card-head">
-                  <h3>การแจ้งเตือนล่าสุด</h3>
-                  <button class="monitor-link" data-admin-view="alerts" type="button">ดูทั้งหมด</button>
-                </div>
-                <div id="dashboardAlertFeed" class="dashboard-alert-feed"></div>
-              </article>
-            </section>
-
-            <article class="monitor-card priority-monitor-card">
-              <div class="table-toolbar monitor-table-toolbar">
-                <div>
-                  <h3>รายชื่อผู้ป่วยที่ต้องเฝ้าระวัง (Priority List)</h3>
-                </div>
-                <div class="filters">
-                  <button class="filter-btn active" data-zone="ALL">ทั้งหมด</button>
-                  <button class="filter-btn red" data-zone="RED">RED ZONE</button>
-                  <button class="filter-btn yellow" data-zone="YELLOW">YELLOW ZONE</button>
-                  <button class="filter-btn green" data-zone="GREEN">GREEN ZONE</button>
-                  <input id="prioritySearch" placeholder="ค้นหา HN / Dx / พื้นที่" />
-                </div>
-              </div>
-              <div class="table-wrap">
-                <table class="priority-table">
-                  <thead>
-                    <tr>
-                      <th>ลำดับ</th>
-                      <th>ระดับ</th>
-                      <th>HN</th>
-                      <th>Dx</th>
-                      <th>คะแนน</th>
-                      <th>พื้นที่</th>
-                      <th>อัพเดทล่าสุด</th>
-                      <th>สถานะ</th>
-                      <th>จัดการ</th>
-                    </tr>
-                  </thead>
-                  <tbody id="priorityRows"></tbody>
-                </table>
-              </div>
-            </article>
-
-            <section class="monitor-bottom-grid">
-              <article class="monitor-card monitor-map-card">
+              <article class="monitor-card monitor-map-card" style="margin: 0; display: flex; flex-direction: column;">
                 <div class="monitor-card-head">
                   <h3>แผนที่ผู้ป่วยแยกตามระดับความเสี่ยง</h3>
                   <span>OpenStreetMap + พิกัดผู้ป่วย</span>
                 </div>
-                <div id="riskMap" class="risk-map real-risk-map" aria-label="แผนที่จริงจังหวัดนครสวรรค์"></div>
+                <div id="riskMap" class="risk-map real-risk-map" aria-label="แผนที่จริงจังหวัดนครสวรรค์" style="flex: 1; min-height: 320px;"></div>
                 <div class="map-legend">
                   <span><i class="red"></i>RED ZONE</span>
                   <span><i class="yellow"></i>YELLOW ZONE</span>
@@ -170,49 +131,53 @@
                 </div>
               </article>
 
-              <div class="monitor-side-stack">
-                <article class="monitor-card">
-                  <div class="monitor-card-head">
-                    <h3>ช่องทางการติดต่อเร่งด่วน</h3>
-                  </div>
-                  <div id="dashboardContacts" class="dashboard-contact-grid"></div>
-                </article>
-                <article class="monitor-card split-card">
-                  <div>
-                    <div class="monitor-card-head">
-                      <h3>สถานะทีมปฏิบัติการ</h3>
-                    </div>
-                    <div id="dashboardOps" class="ops-list"></div>
-                  </div>
-                  <div>
-                    <div class="monitor-card-head">
-                      <h3>การรับมือวันนี้</h3>
-                    </div>
-                    <div id="dashboardDonut" class="response-donut"></div>
-                  </div>
-                </article>
-              </div>
             </section>
 
-            <section class="monitor-bottom-grid slim">
-              <article class="monitor-card">
-                <div class="monitor-card-head">
-                  <h3>การช่วยเหลือล่าสุด</h3>
+            <section style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+              
+              <article class="monitor-card priority-monitor-card" style="margin: 0;">
+                <div class="table-toolbar monitor-table-toolbar" style="flex-wrap: wrap; gap: 1rem;">
+                  <div>
+                    <h3>รายชื่อผู้ป่วยที่ต้องเฝ้าระวัง (Priority List)</h3>
+                  </div>
+                  <div class="filters">
+                    <button class="filter-btn active" data-zone="ALL">ทั้งหมด</button>
+                    <button class="filter-btn red" data-zone="RED">RED</button>
+                    <button class="filter-btn yellow" data-zone="YELLOW">YELLOW</button>
+                    <button class="filter-btn green" data-zone="GREEN">GREEN</button>
+                    <input id="prioritySearch" placeholder="ค้นหา HN / Dx / พื้นที่" />
+                  </div>
                 </div>
-                <div id="dashboardRescueLog" class="rescue-log"></div>
+                <div class="table-wrap" style="max-height: 480px; overflow-y: auto;">
+                  <table class="priority-table">
+                    <thead style="position: sticky; top: 0; background: white; z-index: 10; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                      <tr>
+                        <th>ลำดับ</th>
+                        <th>ระดับ</th>
+                        <th>HN</th>
+                        <th>Dx</th>
+                        <th>คะแนน</th>
+                        <th>พื้นที่</th>
+                        <th>อัพเดทล่าสุด</th>
+                        <th>สถานะ</th>
+                        <th>จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody id="priorityRows"></tbody>
+                  </table>
+                </div>
               </article>
-              <article class="monitor-card">
+
+              <article class="monitor-card" style="margin: 0; display: flex; flex-direction: column;">
                 <div class="monitor-card-head">
-                  <h3>การรักษาหน้าที่ศูนย์ Monitor ER Psychiatric</h3>
+                  <h3>การแจ้งเตือนล่าสุด</h3>
+                  <button class="monitor-link" data-admin-view="alerts" type="button" style="background: #f1f5f9; padding: 0.4rem 0.8rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600;">ดูทั้งหมด</button>
                 </div>
-                <div class="monitor-action-grid">
-                  <div>ติดตามและเฝ้าระวังแบบ Real-time</div>
-                  <div>รับสัญญาณแจ้งเตือนสถานการณ์เร่งด่วน</div>
-                  <div>ประสานทีมเครือข่ายเพื่อการช่วยเหลือ</div>
-                  <div>บันทึกและรายงานผลการดำเนินงาน</div>
-                </div>
+                <div id="dashboardAlertFeed" class="dashboard-alert-feed" style="flex: 1; overflow-y: auto; max-height: 480px; padding-right: 0.5rem;"></div>
               </article>
+
             </section>
+
           </div>
         </section>
 
@@ -222,7 +187,7 @@
               <div>
                 <p class="eyebrow">Area Team</p>
                 <h3>โรงพยาบาลในพื้นที่</h3>
-                <span>รายชื่อเจ้าหน้าที่และข้อมูลติดต่อโรงพยาบาลประจำพื้นที่</span>
+                <span>ข้อมูลติดต่อโรงพยาบาลประจำพื้นที่</span>
               </div>
               <button id="openCaseManagerForm" class="primary-btn" type="button">ลงทะเบียน รพ.ในพื้นที่</button>
             </div>
@@ -230,9 +195,7 @@
               <table class="admin-data-table">
                 <thead>
                   <tr>
-                    <th>ชื่อ-สกุล</th>
-                    <th>ตำแหน่ง</th>
-                    <th>สถานปฏิบัติงาน</th>
+                    <th>โรงพยาบาล</th>
                     <th>พื้นที่รับผิดชอบ</th>
                     <th>โทรศัพท์</th>
                     <th>จัดการ</th>
