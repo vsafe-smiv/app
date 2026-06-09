@@ -1213,6 +1213,9 @@ function updateLiveScore() {
   if (liveScore) liveScore.textContent = `${score} / 20`;
 }
 
+// ==========================================
+// ASSESSMENT LOGIC (แก้ไขไม่รวม Baseline)
+// ==========================================
 function initAssessmentForm() {
   document.querySelector("#assessmentPatientCode")?.addEventListener("change", (event) => {
     if (event.target.value) setActivePatient(event.target.value);
@@ -1220,57 +1223,99 @@ function initAssessmentForm() {
 
   document.querySelector("#assessmentForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    if (assessmentSubmitting) return;
-    assessmentSubmitting = true;
-    const form = event.currentTarget;
-    const submitButton = form.querySelector('button[type="submit"]');
-    if (submitButton) submitButton.disabled = true;
+    
+    // ป้องกันการกดยืนยันซ้ำซ้อนขณะที่ระบบกำลังส่งข้อมูล
+    if (typeof assessmentSubmitting !== 'undefined' && assessmentSubmitting) return;
+    window.assessmentSubmitting = true;
+
     try {
-    const patientCode = new FormData(form).get("patientCode")?.toString().trim();
-    
-    // 1. ตรวจสอบข้อมูลผู้ป่วยและสิทธิ์
-    const patient = storage.get("patients", []).find(p => p.patientCode === patientCode);
-    if (!patient) {
-      await AppDialog.alert("ไม่พบรหัสผู้ป่วย กรุณาตรวจสอบการลงทะเบียน", "ข้อผิดพลาด", "warning");
-      return;
-    }
-    if (!getLinkedPatients().some((item) => item.patientCode === patientCode)) {
-      await AppDialog.alert("ผู้ป่วยรายนี้ไม่ได้อยู่ในบัญชีของคุณ", "ข้อผิดพลาด", "warning");
-      return;
-    }
+      const form = event.currentTarget;
+      const patientCode = new FormData(form).get("patientCode")?.toString().trim();
+      
+      // 1. ตรวจสอบข้อมูลผู้ป่วยและสิทธิ์
+      const patient = storage.get("patients", []).find(p => p.patientCode === patientCode);
+      if (!patient) {
+        AppDialog.alert("ไม่พบรหัสผู้ป่วย กรุณาตรวจสอบการลงทะเบียน", "ข้อผิดพลาด", "warning");
+        return;
+      }
+      if (!getLinkedPatients().some((item) => item.patientCode === patientCode)) {
+        AppDialog.alert("ผู้ป่วยรายนี้ไม่ได้อยู่ในบัญชีของคุณ", "ข้อผิดพลาด", "warning");
+        return;
+      }
 
-    // 2. คำนวณคะแนน (Raw Score + Baseline Score)
-    const answers = {};
-    const rawScore = riskDomains.reduce((sum, item) => {
-    const value = Number(form.querySelector(`input[name="${item.key}"]:checked`)?.value || 0);
-    answers[item.key] = value;
-    return sum + value;
-  }, 0);
+      // 2. คำนวณคะแนน (ใช้เฉพาะคะแนนประเมินปัจจุบันที่กดเลือกหน้าเว็บเท่านั้น ห้ามบวก Baseline)
+      const answers = {};
+      const finalScore = riskDomains.reduce((sum, item) => {
+        const value = Number(form.querySelector(`input[name="${item.key}"]:checked`)?.value || 0);
+        answers[item.key] = value;
+        return sum + value;
+      }, 0);
 
-    const baselineScore = Number(patient.baselineScore || 0);
-    const finalScore = rawScore + baselineScore; // รวมคะแนนฐานเดิม
-    const zone = classifyRisk(finalScore);
-    
-    console.log(`ประเมินสำเร็จ: Raw ${rawScore} + Baseline ${baselineScore} = Total ${finalScore} (${zone})`);
+      // จัดระดับความเสี่ยงตามคะแนนที่ได้จริงในการประเมินครั้งนี้
+      const zone = classifyRisk(finalScore);
+      
+      console.log(`ประเมินสำเร็จ: คะแนนประเมินเพียวๆ = ${finalScore} คะแนน (${zone})`);
 
-    // 3. สร้างข้อมูลการประเมิน
-    const assessment = makeAssessment(patient, finalScore, zone, thaiTimestamp(), answers);
+      // 3. สร้างข้อมูลการประเมิน
+      const assessment = makeAssessment(patient, finalScore, zone, new Date().toISOString(), answers);
 
-    // 4. บันทึกลงฐานข้อมูลจริงก่อน แล้วค่อย sync กลับมาแสดงผล
-    const assessmentSaved = await saveToCloudOrAlert("saveAssessment", assessment, "ไม่สามารถบันทึกผลประเมินได้");
-    if (!assessmentSaved) return;
+      // 4. บันทึกข้อมูลลง Local Storage (อัปเดตประวัติการประเมิน)
+      const assessments = storage.get("assessments", []);
+      assessments.push(assessment);
+      storage.set("assessments", assessments);
 
-    // 5. หากเป็น RED ZONE ฝั่ง Apps Script จะสร้าง Alert ในชีต Alerts ให้พร้อมกับ saveAssessment
+      // 5. อัปเดตข้อมูลคะแนนล่าสุดในโปรไฟล์ผู้ป่วย
+      const patients = storage.get("patients", []);
+      const index = patients.findIndex((item) => item.patientCode === patientCode);
+      if (index >= 0) {
+        patients[index] = { 
+          ...patients[index], 
+          lastScore: finalScore, 
+          lastZone: zone, 
+          status: assessment.status, 
+          updatedAt: assessment.createdAt 
+        };
+        storage.set("patients", patients);
+      }
 
-    // 6. จบการทำงาน
-    showResultDialog(assessment);
-    renderPatientPanels();
-    renderAssessmentPatientOptions();
-    renderHomeNextAssessment();
-    renderHistory();
+      // 6. แจ้งเตือน SOS (เฉพาะ RED ZONE)
+      if (zone === "RED") {
+        const alerts = storage.get("alerts", []);
+        const newAlert = { 
+          ...assessment, 
+          alertId: `ALT-${Date.now()}`, 
+          acknowledged: false 
+        };
+        alerts.unshift(newAlert);
+        storage.set("alerts", alerts);
+        
+        // ส่งข้อมูล SOS เข้าเซิร์ฟเวอร์หลังบ้าน (ถ้าฟังก์ชัน apiPost แจ้งเตือนมีอยู่)
+        if (typeof apiPost === 'function') {
+           await apiPost("saveAlert", newAlert);
+        }
+      }
+
+      // 7. บันทึกผลประเมินขึ้นคลาวด์และแสดงผล
+      if (typeof apiPost === 'function') {
+         await apiPost("saveAssessment", assessment);
+      }
+      
+      setActivePatient(patientCode);
+      
+      // แสดง Popup สรุปผล
+      if (typeof showResultDialog === 'function') showResultDialog(assessment);
+      if (typeof renderHomeNextAssessment === 'function') renderHomeNextAssessment();
+      
+      // รีเซ็ตฟอร์มหลังจากสำเร็จ
+      form.reset();
+      if (typeof updateLiveScore === 'function') updateLiveScore();
+
+    } catch (error) {
+       console.error("เกิดข้อผิดพลาดในการประเมินผล:", error);
+       AppDialog.alert("เกิดข้อผิดพลาดในระบบประเมิน กรุณาลองใหม่อีกครั้ง", "ข้อผิดพลาด", "warning");
     } finally {
-      assessmentSubmitting = false;
-      if (submitButton) submitButton.disabled = false;
+      // ปลดล็อคการกดปุ่ม
+      window.assessmentSubmitting = false; 
     }
   });
 }
