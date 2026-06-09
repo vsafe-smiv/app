@@ -51,4 +51,3 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(request).then((cached) => cached || caches.match("./index.html")))
   );
 });
-โ
