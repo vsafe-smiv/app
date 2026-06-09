@@ -3896,3 +3896,68 @@ dialog::backdrop {
   .dashboard-main-grid { grid-template-columns: 1fr; } /* กราฟกับแผนที่เรียงต่อกันบนล่าง */
   .dashboard-bottom-grid { flex-direction: column; } /* ตารางกับแจ้งเตือนเรียงต่อกันบนล่าง */
 }
+/* =========================================
+   สไตล์สำหรับ Interactive Map & Leaflet
+   ========================================= */
+/* คลาสสำหรับเมื่อแผนที่ขยายเต็มหน้าจอ */
+.map-fullscreen-active {
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 9999 !important;
+  background: white;
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 1rem !important;
+}
+
+/* ปรับแต่งไอคอนหมุด (Marker) บนแผนที่ให้สวยงามและตรงสีกลุ่มเสี่ยง */
+.custom-leaflet-icon {
+  background: transparent;
+  border: none;
+}
+.map-pin-inner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.3);
+  border: 2px solid white;
+}
+.map-pin-inner span {
+  transform: rotate(45deg); /* หมุนตัวเลขกลับให้ตั้งตรง */
+}
+.pin-red { background: #ef4444; }
+.pin-yellow { background: #f59e0b; }
+.pin-green { background: #10b981; }
+
+/* ปรับแต่ง Cluster Marker (หมุดแบบรวมกลุ่มเมื่อซูมออก) */
+.custom-cluster-icon {
+  background: rgba(15, 118, 110, 0.9);
+  color: white;
+  border-radius: 50%;
+  border: 3px solid white;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+}
+
+/* ปรับแต่ง Popup ภายในแผนที่ */
+.leaflet-popup-content-wrapper {
+  border-radius: 0.75rem;
+  padding: 0;
+  overflow: hidden;
+}
+.leaflet-popup-content {
+  margin: 0;
+  line-height: 1.5;
+}
