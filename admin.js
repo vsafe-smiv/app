@@ -493,16 +493,13 @@ function renderMap(rows) {
 
   // 1. ตรวจสอบว่ามีการสร้างแผนที่ไว้หรือยัง ถ้ายังให้สร้างใหม่
   if (!leafletMapInstance) {
-    // กำหนดจุดกึ่งกลางเริ่มต้น (นครสวรรค์)
     leafletMapInstance = L.map('riskMap').setView([15.7047, 100.1372], 9);
 
-    // โหลดชั้นข้อมูลแผนที่ถนนจาก OpenStreetMap
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors',
       maxZoom: 18
     }).addTo(leafletMapInstance);
 
-    // สร้างระบบ Marker Cluster สำหรับจัดกลุ่มหมุดที่อยู่ใกล้กัน
     markerClusterGroup = L.markerClusterGroup({
       iconCreateFunction: function(cluster) {
         return L.divIcon({
@@ -514,69 +511,87 @@ function renderMap(rows) {
     });
     leafletMapInstance.addLayer(markerClusterGroup);
 
-    // ระบบขยายเต็มหน้าจอ (Fullscreen)
+    // --- เพิ่มปุ่มตำแหน่งปัจจุบัน (Locate Me) ---
+    const LocateControl = L.Control.extend({
+      options: { position: 'topleft' },
+      onAdd: function(map) {
+        const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control locate-btn');
+        container.innerHTML = '📍';
+        container.title = "ไปยังตำแหน่งปัจจุบันของฉัน";
+        container.style.cursor = 'pointer';
+        container.style.backgroundColor = 'white';
+        container.style.width = '30px';
+        container.style.height = '30px';
+        container.style.display = 'flex';
+        container.style.alignItems = 'center';
+        container.style.justifyContent = 'center';
+        
+        container.onclick = function() {
+          map.locate({ setView: true, maxZoom: 16 });
+        };
+        return container;
+      }
+    });
+    leafletMapInstance.addControl(new LocateControl());
+
+    // แสดงจุดตำแหน่งของผู้ใช้เมื่อพบพิกัด
+    leafletMapInstance.on('locationfound', function(e) {
+      L.circleMarker(e.latlng, {
+        color: '#3b82f6',
+        fillColor: '#3b82f6',
+        fillOpacity: 0.7,
+        radius: 8
+      }).addTo(leafletMapInstance).bindPopup("คุณอยู่ที่นี่").openPopup();
+    });
+
+    // ระบบขยายเต็มหน้าจอ
     const fsBtn = document.getElementById('fullscreenMapBtn');
     const mapCard = document.querySelector('.monitor-map-card');
     if (fsBtn && mapCard) {
       fsBtn.addEventListener('click', () => {
         mapCard.classList.toggle('map-fullscreen-active');
-        // อัปเดตขนาดแผนที่ให้วาดใหม่หลังเปลี่ยนขนาดกล่อง
         setTimeout(() => leafletMapInstance.invalidateSize(), 300);
-        
-        // สลับรูปไอคอนปุ่มขยาย/ย่อ
-        if (mapCard.classList.contains('map-fullscreen-active')) {
-          fsBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>`;
-        } else {
-          fsBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>`;
-        }
       });
     }
   }
 
-  // 2. เคลียร์หมุดเก่าออกให้หมดก่อนวาดใหม่
+  // 2. เคลียร์หมุดเก่า
   markerClusterGroup.clearLayers();
 
-  // 3. แปลงข้อมูลพิกัด (ลอจิกเดิมของคุณ)
+  // 3. วาดหมุดผู้ป่วย
   const points = rows.map((row) => ({ ...row, coords: parseLatLng(row.latlng) })).filter((row) => row.coords);
-
-  // 4. วนลูปปักหมุดผู้ป่วยทีละคน
   points.forEach(row => {
     let pinClass = 'pin-green';
     let hexColor = '#10b981';
     if (row.zone === 'RED') { pinClass = 'pin-red'; hexColor = '#ef4444'; }
     else if (row.zone === 'YELLOW') { pinClass = 'pin-yellow'; hexColor = '#f59e0b'; }
 
-    // สร้างไอคอนหมุดแบบ HTML (รูปทรงหยดน้ำ)
     const customIcon = L.divIcon({
       html: `<div class="map-pin-inner ${pinClass}"><span>${row.score}</span></div>`,
       className: 'custom-leaflet-icon',
       iconSize: [36, 36],
-      iconAnchor: [18, 36], // จุดปักให้แหลมชี้ลงพื้น
-      popupAnchor: [0, -32] // จุดที่ Popup จะเด้งขึ้น
+      iconAnchor: [18, 36],
+      popupAnchor: [0, -32]
     });
 
     const marker = L.marker([row.coords[0], row.coords[1]], { icon: customIcon });
-
-    // สร้าง HTML สำหรับหน้าต่าง Popup เมื่อคลิกที่หมุด
+    
+    // แก้ไขลิงก์ Google Maps ให้ถูกต้อง
     const popupHTML = `
       <div style="min-width: 220px;">
-        <div style="background: ${hexColor}; color: white; padding: 10px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
-          <span>HN: ${escapeHtml(row.hn || "-")}</span>
-          <span style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">${row.zone}</span>
+        <div style="background: ${hexColor}; color: white; padding: 10px; font-weight: bold;">
+          HN: ${escapeHtml(row.hn || "-")} | ${row.zone}
         </div>
         <div style="padding: 12px;">
-          <p style="margin: 0 0 6px 0; font-size: 0.9rem;"><strong>คะแนนความเสี่ยง:</strong> ${row.score} คะแนน</p>
-          <p style="margin: 0 0 12px 0; font-size: 0.9rem;"><strong>สถานะ:</strong> ${escapeHtml(row.status || "-")}</p>
-          
-          <a href="https://www.google.com/maps/dir/?api=1&destination=${row.coords[0]},${row.coords[1]}" 
+          <p>คะแนน: ${row.score} | สถานะ: ${escapeHtml(row.status || "-")}</p>
+          <a href="https://www.google.com/maps/search/?api=1&query=${row.coords[0]},${row.coords[1]}" 
              target="_blank" 
-             style="display: block; width: 100%; text-align: center; background: #0f766e; color: white; padding: 8px 0; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 0.95rem;">
-             🗺️ นำทางไปยังพิกัด
+             style="display: block; width: 100%; text-align: center; background: #0f766e; color: white; padding: 8px 0; border-radius: 6px; text-decoration: none;">
+             🗺️ นำทาง
           </a>
         </div>
       </div>
     `;
-
     marker.bindPopup(popupHTML);
     markerClusterGroup.addLayer(marker);
   });
