@@ -840,10 +840,33 @@ function showAdminDetail(html) {
 function renderAlertFeed() {
   const feed = document.querySelector("#alertFeed");
   if (!feed) return;
+  
+  // สร้าง container wrapper ถ้ายังไม่มี
+  if (!feed.classList.contains("alert-feed-container")) {
+    feed.classList.add("alert-feed-container");
+  }
+
   const alerts = storage.get("alerts", []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  
   feed.innerHTML = alerts.length
-    ? alerts.map((alert) => `<article class="alert-item"><span class="alert-dot ${zoneClass(alert.zone)}"></span><div><strong>${alert.zone} ZONE | HN ${escapeHtml(alert.hn || "-")} | ${escapeHtml(alert.dx || "-")}</strong><p>${alert.score} คะแนน | ${escapeHtml(alert.district || "-")} | ${escapeHtml(alert.status || "-")}</p></div><small>${formatThaiDateTime(alert.createdAt)}</small></article>`).join("")
-    : `<div class="muted-box">ยังไม่มีรายการแจ้งเตือน Yellow/Red Zone</div>`;
+    ? alerts.map((alert) => {
+        const isRed = alert.zone === "RED";
+        const borderClass = isRed ? "alert-red" : "alert-yellow";
+        
+        return `
+          <article class="alert-item ${borderClass}">
+            <div class="status-dot"></div>
+            <div class="alert-info">
+              <strong>${alert.zone} ZONE | HN ${escapeHtml(alert.hn || "-")} | ${escapeHtml(alert.dx || "-")}</strong>
+              <small>${alert.score} คะแนน | ${escapeHtml(alert.district || "-")} | ${escapeHtml(alert.status || "-")}</small>
+            </div>
+            <div class="alert-timestamp">
+              ${formatThaiDateTime(alert.createdAt)}
+            </div>
+          </article>
+        `;
+      }).join("")
+    : `<div class="muted-box" style="padding: 1rem; text-align: center;">ยังไม่มีรายการแจ้งเตือน</div>`;
 }
 
 function showUnacknowledgedSos() {
