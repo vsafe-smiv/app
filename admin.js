@@ -784,43 +784,38 @@ function parseLatLng(value = "") {
 }
 
 function renderDashboardAlerts() {
-  const container = document.querySelector("#dashboardAlertFeed");
+  const container = document.querySelector("#dashAlertList");
   if (!container) return;
+  const allAlerts = storage.get("alerts", []);
   
-  // กำหนด Class สำหรับ Container เพื่อให้ CSS ทำงาน
-  container.className = "alert-feed-container";
+  // โชว์แจ้งเตือนใหม่ที่ยังไม่รับทราบ (แดง/เหลือง) เรียงจากใหม่ไปเก่า (limit 4 รายการ)
+  const recentAlerts = allAlerts
+    .filter(a => !a.acknowledged)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 4);
 
-  const alerts = storage.get("alerts", []).sort((a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt)).slice(0, 5);
-  
-  container.innerHTML = alerts.length
-    ? alerts.map((alert) => {
-        const isRed = alert.zone === "RED";
-        // เพิ่ม Class สำหรับสีขอบ และ Class สำหรับสีพื้นหลัง
-        const borderClass = isRed ? "alert-red" : "alert-yellow";
-        const bgClass = isRed ? "bg-red-alert" : "bg-yellow-alert";
-        
-        // สร้างวันที่แบบสั้น ควบคู่กับเวลา (เช่น 9 มิ.ย. | 14:30)
-        const dateObj = new Date(alert.createdAt);
-        const shortDate = new Intl.DateTimeFormat("th-TH-u-ca-buddhist", { day: "numeric", month: "short" }).format(dateObj);
-        const shortTime = dateObj.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false });
-        
-        return `
-          <article class="alert-item ${borderClass} ${bgClass}">
-            <div class="time-dot-col">
-                <span class="alert-time">${shortTime}</span>
-                <div class="status-dot"></div>
-            </div>
-            <div class="alert-info">
-              <strong>${alert.zone} ZONE | HN ${escapeHtml(alert.hn || "-")} | ${escapeHtml(alert.dx || "-")}</strong>
-              <small>${alert.score} คะแนน | ${escapeHtml(alert.district || "-")} | ${escapeHtml(alert.status || "-")}</small>
-            </div>
-            <div class="alert-timestamp">
-              ${shortDate}
-            </div>
-          </article>
-        `;
-      }).join("")
-    : `<div class="muted-box" style="text-align:center; padding:1rem;">ไม่พบรายการแจ้งเตือน</div>`;
+  if (recentAlerts.length === 0) {
+    container.innerHTML = `<div class="muted-box" style="margin-top: 1rem;">ไม่มีการแจ้งเตือนใหม่</div>`;
+    return;
+  }
+
+  // วาดบล็อกแจ้งเตือนและเพิ่มฟังก์ชันคลิก showPatientDetail
+  container.innerHTML = recentAlerts.map(alert => {
+    const isRed = alert.zone === "RED";
+    const borderClass = isRed ? "alert-red" : "alert-yellow";
+    return `
+      <article class="alert-item ${borderClass}" style="cursor: pointer; transition: transform 0.2s;" onclick="showPatientDetail('${escapeHtml(alert.patientCode)}')">
+        <div class="status-dot"></div>
+        <div class="alert-info">
+          <strong>${alert.zone} ZONE | HN ${escapeHtml(alert.hn || "-")} | ${escapeHtml(alert.dx || "-")}</strong>
+          <small>${alert.score} คะแนน | อ.${escapeHtml(alert.district || "-")}</small>
+        </div>
+        <div style="margin-left: auto; color: #64748b; display: flex; align-items: center;" title="คลิกเพื่อดูข้อมูลผู้ป่วย">
+          <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+        </div>
+      </article>
+    `;
+  }).join("");
 }
 
 // ---------------------------------------------
@@ -915,18 +910,18 @@ async function updatePatientStatus(patientCode, status) {
 // =========================================================
 // 1. ฟังก์ชันแสดงรายละเอียดผู้ป่วย (ชุดที่คุณต้องการ)
 function showPatientDetail(patientCode) {
-  // ตรวจสอบข้อมูลจาก storage
+  // 1. ตรวจสอบข้อมูลจาก storage
   const row = storage.get("patients", []).find((p) => p.patientCode === patientCode);
   if (!row) {
     AppDialog.alert("ไม่พบข้อมูลผู้ป่วย", "ข้อผิดพลาด", "warning");
     return;
   }
 
-  // หาข้อมูลผู้ดูแลและ Case Manager
+  // 2. หาข้อมูลผู้ดูแลและ Case Manager
   const cm = storage.get("caseManagers", []).find(item => item.district === row.district) || null;
   const caregivers = getCaregiversByPatient(row.patientCode);
 
-  // ประกอบที่อยู่
+  // 3. ประกอบที่อยู่
   const fullAddressDisplay = [
     row.houseNo ? `เลขที่ ${row.houseNo}` : "",
     row.moo ? `ม.${row.moo}` : "",
@@ -938,12 +933,17 @@ function showPatientDetail(patientCode) {
     row.zipcode ? `${row.zipcode}` : ""
   ].filter(Boolean).join(" ");
 
-  // แสดงผล
+  // 4. --- ส่วนที่แก้ไขเพื่อป้องกัน Error ---
+  // เช็คว่ามี row.zone หรือไม่ ถ้าไม่มีให้ไปดู row.lastZone ถ้าไม่มีอีกให้เป็น "GREEN"
+  const currentZone = row.zone || row.lastZone || "GREEN"; 
+  const currentScore = row.score || row.lastScore || 0;
+
+  // 5. แสดงผล (ใช้ currentZone แทน row.zone)
   showAdminDetail(`
-    <div class="detail-summary ${zoneClass(row.zone)}">
-      <span class="risk-badge ${zoneClass(row.zone)}">${row.zone || "GREEN"}</span>
+    <div class="detail-summary ${zoneClass(currentZone)}">
+      <span class="risk-badge ${zoneClass(currentZone)}">${currentZone}</span>
       <h2>${escapeHtml(row.prefix || "")}${escapeHtml(row.fullName || "")}</h2>
-      <p>HN ${escapeHtml(row.hn || "-")} | Dx ${escapeHtml(row.dx || "-")} | ${row.score || 0} คะแนน</p>
+      <p>HN ${escapeHtml(row.hn || "-")} | Dx ${escapeHtml(row.dx || "-")} | ${currentScore} คะแนน</p>
     </div>
     <div class="detail-grid-admin">
       ${detailItem("รหัสผู้ป่วย", row.patientCode)}
@@ -1127,33 +1127,32 @@ async function deletePatientRecord(patientCode) {
 }
 
 function renderAlertFeed() {
-  const feed = document.querySelector("#alertFeed");
-  if (!feed) return;
+  const container = document.querySelector("#alertFeed");
+  if (!container) return;
   
-  // กำหนด Class สำหรับ Container เพื่อใช้ CSS ชุดใหม่
-  feed.className = "alert-feed-container";
+  const allAlerts = storage.get("alerts", []);
+  const activeAlerts = allAlerts.filter(a => !a.acknowledged).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  
+  if (activeAlerts.length === 0) {
+    container.innerHTML = `<div class="muted-box">ไม่มีการแจ้งเตือนใหม่ในขณะนี้</div>`;
+    return;
+  }
 
-  const alerts = storage.get("alerts", []).sort((a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt));
-  
-  feed.innerHTML = alerts.length
-    ? alerts.map((alert) => {
-        const isRed = alert.zone === "RED";
-        const borderClass = isRed ? "alert-red" : "alert-yellow";
-        
-        return `
-          <article class="alert-item ${borderClass}">
-            <div class="status-dot"></div>
-            <div class="alert-info">
-              <strong>${alert.zone} ZONE | HN ${escapeHtml(alert.hn || "-")} | ${escapeHtml(alert.dx || "-")}</strong>
-              <small>${alert.score} คะแนน | ${escapeHtml(alert.district || "-")} | ${escapeHtml(alert.status || "-")}</small>
-            </div>
-            <div class="alert-timestamp">
-              ${formatThaiDateTime(alert.createdAt)}
-            </div>
-          </article>
-        `;
-      }).join("")
-    : `<div class="muted-box" style="text-align:center; padding:1rem;">ไม่พบรายการแจ้งเตือน</div>`;
+  container.innerHTML = activeAlerts.map(alert => {
+    const isRed = alert.zone === "RED";
+    return `
+      <div class="feed-item ${isRed ? "red" : "yellow"}">
+        <div class="feed-content" style="cursor: pointer;" onclick="showPatientDetail('${escapeHtml(alert.patientCode)}')">
+          <strong>${alert.zone} ZONE: HN ${escapeHtml(alert.hn || "-")}</strong>
+          <p>อ.${escapeHtml(alert.district || "-")} | คะแนน ${alert.score}</p>
+        </div>
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="secondary-btn small" onclick="showPatientDetail('${escapeHtml(alert.patientCode)}')">ดูข้อมูล</button>
+          <button class="primary-btn small" onclick="acknowledgeSos('${alert.alertId}')">รับทราบ</button>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
 
 function showUnacknowledgedSos() {
