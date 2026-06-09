@@ -590,17 +590,32 @@ function parseLatLng(value = "") {
 function renderDashboardAlerts() {
   const container = document.querySelector("#dashboardAlertFeed");
   if (!container) return;
+  
+  // เพิ่ม class ให้ container เพื่อให้ CSS ทำงาน
+  container.className = "alert-feed-container";
+
   const alerts = storage.get("alerts", []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+  
   container.innerHTML = alerts.length
-    ? alerts.map((alert) => `
-        <article class="alert-item" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:0.75rem; padding:1rem; margin-bottom:0.8rem; border-left:4px solid ${alert.zone === 'RED' ? '#ef4444' : '#f59e0b'};">
-          <time style="font-size: 0.8rem; color: #64748b;">${new Date(alert.createdAt).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })}</time>
-          <strong style="color: ${alert.zone === 'RED' ? '#ef4444' : '#f59e0b'}; margin: 0.2rem 0; display:block;">${alert.zone} ZONE | HN ${escapeHtml(alert.hn || "-")}</strong>
-          <p style="margin: 0; font-size: 0.9rem;">${escapeHtml(alert.dx || "-")} | คะแนน ${escapeHtml(alert.score ?? "-")}</p>
-          <small style="color: #64748b; margin-top: 0.2rem; display:block;">${escapeHtml(alert.district || "-")} | ${escapeHtml(alert.status || "-")}</small>
-        </article>
-      `).join("")
-    : `<div class="monitor-empty" style="padding: 2rem; text-align: center; color: #64748b;">ยังไม่มีการแจ้งเตือน<br>Yellow / Red Zone</div>`;
+    ? alerts.map((alert) => {
+        const isRed = alert.zone === "RED";
+        const borderClass = isRed ? "red-border" : "yellow-border";
+        const timeStr = new Date(alert.createdAt).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false });
+        
+        return `
+          <article class="alert-item ${borderClass}">
+            <div class="time-dot-col">
+                <span class="alert-time">${timeStr}</span>
+                <div class="status-dot"></div>
+            </div>
+            <div class="alert-content">
+                <div class="alert-header">${alert.zone} ZONE | HN ${escapeHtml(alert.hn || "-")} | ${escapeHtml(alert.dx || "-")}</div>
+                <div class="alert-subheader">คะแนน ${escapeHtml(alert.score ?? "-")} | ${escapeHtml(alert.district || "-")} | ${escapeHtml(alert.status || "-")}</div>
+            </div>
+          </article>
+        `;
+      }).join("")
+    : `<div style="text-align:center; padding:1rem; color:#64748b;">ไม่พบรายการแจ้งเตือน</div>`;
 }
 
 // ---------------------------------------------
@@ -841,10 +856,8 @@ function renderAlertFeed() {
   const feed = document.querySelector("#alertFeed");
   if (!feed) return;
   
-  // สร้าง container wrapper ถ้ายังไม่มี
-  if (!feed.classList.contains("alert-feed-container")) {
-    feed.classList.add("alert-feed-container");
-  }
+  // กำหนด Class สำหรับ Container เพื่อใช้ CSS ชุดใหม่
+  feed.className = "alert-feed-container";
 
   const alerts = storage.get("alerts", []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   
@@ -866,7 +879,7 @@ function renderAlertFeed() {
           </article>
         `;
       }).join("")
-    : `<div class="muted-box" style="padding: 1rem; text-align: center;">ยังไม่มีรายการแจ้งเตือน</div>`;
+    : `<div class="muted-box" style="text-align:center; padding:1rem;">ไม่พบรายการแจ้งเตือน</div>`;
 }
 
 function showUnacknowledgedSos() {
