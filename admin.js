@@ -1222,3 +1222,13 @@ function getCaregiversByPatient(patientCode) {
     return Array.isArray(codes) && codes.includes(patientCode);
   });
 }
+function showAdminDetail(htmlContent) {
+  const dialog = document.getElementById("adminDetailDialog");
+  const content = document.getElementById("adminDetailContent");
+  if (dialog && content) {
+    content.innerHTML = htmlContent;
+    dialog.showModal();
+  } else {
+    console.error("ไม่พบ element สำหรับแสดงรายละเอียดผู้ป่วย");
+  }
+}
