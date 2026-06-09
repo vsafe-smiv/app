@@ -370,9 +370,22 @@
                 <label>รหัสไปรษณีย์
                   <input name="zipcode" class="adminZipcode" inputmode="numeric" readonly />
                 </label>
-                <label>รายละเอียดที่อยู่
-                  <input name="addressLine" class="adminAddressLine" placeholder="บ้านเลขที่ หมู่ ซอย ถนน" />
-                </label>
+                <div class="field-grid two">
+                  <label>บ้านเลขที่
+                    <input name="houseNo" placeholder="เลขที่บ้าน" />
+                  </label>
+                  <label>หมู่ที่
+                    <input name="moo" placeholder="หมู่ที่" />
+                  </label>
+                </div>
+                <div class="field-grid two">
+                  <label>ชื่อหมู่บ้าน / ชุมชน
+                    <input name="villageName" placeholder="เช่น หมู่บ้านสุขใจ" />
+                  </label>
+                  <label>ถนน / ซอย
+                    <input name="road" placeholder="เช่น ถ.สว่างแดนดิน" />
+                  </label>
+                </div>
                 <label>พิกัดโดยประมาณ
                   <input name="latlng" class="adminLatLng" placeholder="ระบบคำนวณอัตโนมัติ" readonly />
                 </label>
