@@ -208,24 +208,29 @@ function hideCaseManagerForm() {
   document.querySelector("#caseManagerFormCard")?.classList.add("hidden");
 }
 
+// =========================================================
+// ปรับปรุงฟังก์ชันเปิดหน้าฟอร์ม (showPatientForm) ให้เคลียร์และป้อน 4 ช่องใหม่ได้ครบถ้วน
+// =========================================================
 function showPatientForm(patient = null) {
   const card = document.querySelector("#patientFormCard");
   const form = document.querySelector("#patientForm");
   if (!card || !form) return;
   form.reset();
-  document.querySelector("#patientFormHeading").textContent = patient ? "แก้ไขข้อมูลผู้ป่วย" : "ลงทะเบียนผู้ป่วย";
+  
+  const titleHeading = document.querySelector("#patientFormHeading");
+  if (titleHeading) titleHeading.textContent = patient ? "แก้ไขข้อมูลผู้ป่วย" : "ลงทะเบียนผู้ป่วยใหม่";
+  
   form.elements.editingKey.value = patient?.patientCode || "";
+  
   if (patient) {
-    ["patientCode", "hn", "prefix", "fullName", "gender", "dob", 
-     "violenceHistoryDate", "substanceUse", "substanceDetail", 
-     "dx", "dischargeDate", "baselineScore", "zipcode", 
-     "houseNo", "moo", "villageName", "road", "latlng"].forEach((name) => {
-       if (form.elements[name]) form.elements[name].value = patient[name] || "";
+    // โหลดฟิลด์ข้อมูลรวมถึง 4 ฟิลด์ที่อยู่ที่สร้างขึ้นมาใหม่ลงบนช่องกรอก
+    ["patientCode","hn","prefix","fullName","gender","dob","violenceHistoryDate","substanceUse","substanceDetail","dx","dischargeDate","baselineScore","zipcode","houseNo","moo","villageName","road","latlng"].forEach((name) => {
+      if (form.elements[name]) form.elements[name].value = patient[name] || "";
     });
     setAddressFormValues(form, patient);
     updatePatientLatLng(form);
   } else {
-    setupAddressSelects(document);
+    setupAddressSelects(scope = document);
     updatePatientLatLng(form);
   }
   card.classList.remove("hidden");
@@ -255,28 +260,123 @@ function setAddressFormValues(form, payload) {
   if (form.elements.zipcode && payload.zipcode) form.elements.zipcode.value = payload.zipcode;
 }
 
+// =========================================================
+// ปรับปรุงฟังก์ชันผูก Event Listener และเพิ่มปุ่มจับพิกัด GPS จริง
+// =========================================================
 function initPatientAddressAutomation() {
   const form = document.querySelector("#patientForm");
   if (!form) return;
+
   const hnInput = form.elements.hn;
   const codeInput = form.elements.patientCode;
+
   hnInput?.addEventListener("input", () => {
     if (codeInput && !codeInput.dataset.touched) codeInput.value = hnInput.value ? `${hnInput.value.trim()}SMIV` : "";
   });
-  codeInput?.addEventListener("input", () => {
-    codeInput.dataset.touched = "1";
-  });
-  ["province", "district", "subdistrict", "addressLine"].forEach((name) => {
+  codeInput?.addEventListener("input", () => { codeInput.dataset.touched = "1"; });
+
+  // ตรวจจับการพิมพ์ใน 4 ช่องข้อมูลที่อยู่ใหม่ และดรอปดาวน์ทั้งหมด
+  const addressFields = ["houseNo", "moo", "villageName", "road"];
+  addressFields.forEach((name) => {
     form.elements[name]?.addEventListener("input", () => updatePatientLatLng(form));
-    form.elements[name]?.addEventListener("change", () => updatePatientLatLng(form));
   });
-  updatePatientLatLng(form);
+
+  // ปุ่มกดรับพิกัดปัจจุบันจาก GPS สดของอุปกรณ์ ณ ขณะนั้น (สำหรับงานลงพื้นที่เชิงรุก)
+  document.querySelector("#btnGetActualGPS")?.addEventListener("click", () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition((position) => {
+        form.elements.latlng.value = `${position.coords.latitude.toFixed(5)},${position.coords.longitude.toFixed(5)}`;
+        alert("ดึงพิกัดจริงแม่นยำจาก GPS สำเร็จ!");
+      }, () => {
+        alert("ไม่สามารถดึง GPS ได้ กรุณาตรวจสอบสิทธิ์การเข้าถึงพิกัดบนอุปกรณ์");
+      });
+    } else {
+      alert("อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับระบบ Geolocation");
+    }
+  });
 }
 
+// =========================================================
+// เพิ่มระบบ INITIALIZE ข้อมูลตารางที่อยู่จากฐานข้อมูลแบบใหม่
+// รองรับหัวข้อ: province, amphoe, tambon, zipcode
+// =========================================================
+function setupAddressSelects(scope = document) {
+  const provinceSelects = scope.querySelectorAll(".adminProvince");
+  
+  // ดึงข้อมูล AddressData จาก Cloud Cache (ถ้าไม่มีให้ Fallback เป็นข้อมูลจำลองต้นแบบ)
+  const addressList = storage.get("addressData") || [
+    { province: "นครสวรรค์", amphoe: "เมืองนครสวรรค์", tambon: "ปากน้ำโพ", zipcode: "60000" },
+    { province: "นครสวรรค์", amphoe: "เมืองนครสวรรค์", ... }
+  ];
+
+  provinceSelects.forEach((provinceSelect) => {
+    const form = provinceSelect.closest("form");
+    if (!form) return;
+    
+    const districtSelect = form.querySelector(".adminDistrict");
+    const subdistrictSelect = form.querySelector(".adminSubdistrict");
+    const zipcodeInput = form.querySelector(".adminZipcode");
+
+    // Extract รายชื่อจังหวัดที่ไม่ซ้ำ
+    const uniqueProvinces = [...new Set(addressList.map(item => item.province))];
+    provinceSelect.innerHTML = uniqueProvinces.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join("");
+
+    const refreshDistricts = () => {
+      if (!districtSelect) return;
+      const filtered = addressList.filter(item => item.province === provinceSelect.value);
+      const uniqueAmphoes = [...new Set(filtered.map(item => item.amphoe))];
+      districtSelect.innerHTML = uniqueAmphoes.map(a => `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`).join("");
+      refreshSubdistricts();
+    };
+
+    const refreshSubdistricts = () => {
+      if (!subdistrictSelect) return;
+      const filtered = addressList.filter(item => item.province === provinceSelect.value && item.amphoe === districtSelect.value);
+      subdistrictSelect.innerHTML = filtered.map(item => `<option value="${escapeHtml(item.tambon)}">${escapeHtml(item.tambon)}</option>`).join("");
+      
+      if (zipcodeInput && filtered.length > 0) {
+        zipcodeInput.value = filtered[0].zipcode || "";
+      }
+      updatePatientLatLng(form);
+    };
+
+    provinceSelect.addEventListener("change", refreshDistricts);
+    districtSelect?.addEventListener("change", refreshSubdistricts);
+    subdistrictSelect?.addEventListener("change", () => {
+      const match = addressList.find(item => item.province === provinceSelect.value && item.amphoe === districtSelect.value && item.tambon === subdistrictSelect.value);
+      if (zipcodeInput && match) zipcodeInput.value = match.zipcode || "";
+      updatePatientLatLng(form);
+    });
+
+    refreshDistricts();
+  });
+}
+
+// =========================================================
+// ปรับปรุงฟังก์ชันคำนวณที่อยู่เต็ม และ ผูก Event ตรวจจับอัตโนมัติ
+// =========================================================
 function updatePatientLatLng(form) {
   const latlngField = form.elements.latlng;
   if (!latlngField) return;
-  latlngField.value = calculateLatLngFromAddress(Object.fromEntries(new FormData(form).entries()));
+
+  const payload = Object.fromEntries(new FormData(form).entries());
+  
+  // ประกอบ Full Address String อัตโนมัติจากช่องข้อมูลใหม่ 4 ช่อง
+  const houseNo = payload.houseNo ? `บ้านเลขที่ ${payload.houseNo}` : "";
+  const moo = payload.moo ? `หมู่ที่ ${payload.moo}` : "";
+  const village = payload.villageName ? `หมู่บ้าน/ชุมชน ${payload.villageName}` : "";
+  const road = payload.road ? `ถนน/ซอย ${payload.road}` : "";
+  const subdistrict = payload.subdistrict ? `ต.${payload.subdistrict}` : "";
+  const district = payload.district ? `อ.${payload.district}` : "";
+  const province = payload.province ? `จ.${payload.province}` : "";
+
+  const fullAddress = [houseNo, moo, village, road, subdistrict, district, province].filter(Boolean).join(" ");
+  
+  // บันทึกที่อยู่เต็มลงใน Object ชั่วคราวเพื่อส่ง Geocoding หรือ บันทึกลงฐานข้อมูล
+  form.dataset.fullAddressString = fullAddress;
+
+  // ฟังก์ชันคำนวณจุดกึ่งกลางแบบ Fallback เดิม
+  latlngField.value = calculateLatLngFromAddress(payload);
 }
 
 function calculateLatLngFromAddress(payload) {
@@ -738,11 +838,27 @@ function updatePatientStatus(patientCode, status) {
   renderDashboardAlerts();
 }
 
+// =========================================================
+// แก้ไขระบบแสดงผลรายละเอียดที่อยู่ผู้ป่วยแบบเต็มตัว ในตารางและหน้าต่างข้อมูล
+// =========================================================
 function showPatientDetail(patientCode) {
   const row = patientCurrentRows().find((patient) => patient.patientCode === patientCode);
   if (!row) return;
   const cm = findCaseManager(row.district);
   const caregivers = getCaregiversByPatient(row.patientCode);
+
+  // การประกอบคำที่อยู่ให้ละเอียดชัดเจนครบถ้วนเพื่อแสดงผลในฝั่งแอดมิน
+  const fullAddressDisplay = [
+    row.houseNo ? `เลขที่ ${row.houseNo}` : "",
+    row.moo ? `ม.${row.moo}` : "",
+    row.villageName ? `${row.villageName}` : "",
+    row.road ? `ถ./ซอย ${row.road}` : "",
+    row.subdistrict ? `ต.${row.subdistrict}` : "",
+    row.district ? `อ.${row.district}` : "",
+    row.province ? `จ.${row.province}` : "",
+    row.zipcode ? `${row.zipcode}` : ""
+  ].filter(Boolean).join(" ");
+
   showAdminDetail(`
     <div class="detail-summary ${zoneClass(row.zone)}">
       <span class="risk-badge ${zoneClass(row.zone)}">${row.zone}</span>
@@ -756,12 +872,12 @@ function showPatientDetail(patientCode) {
       ${detailItem("วันที่จำหน่าย", row.dischargeDate ? formatThaiDateTime(row.dischargeDate) : "-")}
       ${detailItem("ประวัติความรุนแรง", row.violenceHistoryDate || "-")}
       ${detailItem("สารเสพติด", row.substanceUse === "ใช้" ? `ใช้: ${row.substanceDetail || "-"}` : "ไม่ใช้")}
-      ${detailItem("ที่อยู่", `${row.addressLine || "-"} ต.${row.subdistrict || "-"} อ.${row.district || "-"} จ.${row.province || "-"}`)}
-      ${detailItem("พิกัด", row.latlng || "-")}
-      ${detailItem("สถานะ", row.status || "-")}
-      ${detailItem("โรงพยาบาลในพื้นที่", cm ? `${cm.workplace} | โทร ${cm.phone}` : "ไม่พบข้อมูล")}
+      ${detailItem("รายละเอียดที่อยู่ละเอียด", fullAddressDisplay)}
+      ${detailItem("พิกัดแผนที่", row.latlng || "-")}
+      ${detailItem("สถานะการดูแล", row.status || "-")}
+      ${detailItem("ศูนย์ดูแลรับผิดชอบ", cm ? `${cm.workplace} | โทร ${cm.phone}` : "ไม่พบข้อมูล")}
     </div>
-    <h3>ข้อมูลผู้ดูแล</h3>
+    <h3>ข้อมูลผู้ดูแล (ญาติ)</h3>
     <div class="caregiver-detail-list">
       ${caregivers.length ? caregivers.map((c) => `<article><strong>${escapeHtml(c.prefix || "")}${escapeHtml(c.fullName || "")}</strong><span>${escapeHtml(c.relationship || "-")} | ${escapeHtml(c.phone || "-")}</span><small>${escapeHtml(c.addressLine || "-")} อ.${escapeHtml(c.district || "-")}</small></article>`).join("") : `<div class="muted-box">ยังไม่พบผู้ดูแลที่เชื่อมกับผู้ป่วยรายนี้</div>`}
     </div>
