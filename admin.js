@@ -338,7 +338,28 @@ function renderDashboard() {
   renderMap(rows);
   renderPriorityTable();
   renderAlertFeed();
+  renderDashboardAlerts();
   showUnacknowledgedSos();
+}
+// ฟังก์ชันดึงรายการแจ้งเตือนมาแสดงเฉพาะในหน้า Dashboard (จำกัด 5 รายการล่าสุด)
+function renderDashboardAlerts() {
+  const container = document.querySelector("#dashboardAlertFeed");
+  if (!container) return;
+  
+  const alerts = storage.get("alerts", []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+  
+  container.innerHTML = alerts.length
+    ? alerts
+        .map((alert) => `
+          <article class="alert-item ${alert.zone}">
+            <time style="font-size: 0.8rem; color: #64748b;">${new Date(alert.createdAt).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })}</time>
+            <strong style="color: ${alert.zone === 'RED' ? '#ef4444' : '#f59e0b'}; margin: 0.2rem 0;">${alert.zone} ZONE | HN ${escapeHtml(alert.hn || "-")}</strong>
+            <p style="margin: 0; font-size: 0.9rem;">${escapeHtml(alert.dx || "-")} | คะแนน ${escapeHtml(alert.score ?? "-")}</p>
+            <small style="color: #64748b; margin-top: 0.2rem;">${escapeHtml(alert.district || "-")} | ${escapeHtml(alert.status || "-")}</small>
+          </article>
+        `)
+        .join("")
+    : `<div class="monitor-empty" style="padding: 2rem; text-align: center; color: #64748b;">ยังไม่มีการแจ้งเตือน<br>Yellow / Red Zone</div>`;
 }
 
 function renderOverview(rows) {
