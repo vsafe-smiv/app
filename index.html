@@ -477,25 +477,23 @@
 
           <div class="form-card auth-inner-card register-step" data-register-step="5">
             <h3>ข้อมูลที่อยู่และพื้นที่บริการ</h3>
-            <div class="field-grid two">
+            <div class="field-grid three">
               <label>จังหวัด
-                <select name="province" id="authProvinceSelect" required></select>
+                <select name="province" required>
+                  <option value="">-- เลือกจังหวัด --</option>
+                </select>
               </label>
               <label>อำเภอ
-                <select name="district" id="authDistrictSelect" required></select>
+                <select name="district" required>
+                  <option value="">-- เลือกอำเภอ --</option>
+                </select>
               </label>
-            </div>
-            <div class="field-grid two">
               <label>ตำบล
-                <select name="subdistrict" id="authSubdistrictSelect" required></select>
-              </label>
-              <label>รหัสไปรษณีย์
-                <input name="zipcode" id="authZipcodeInput" inputmode="numeric" readonly />
+                <select name="subdistrict" required>
+                  <option value="">-- เลือกตำบล --</option>
+                </select>
               </label>
             </div>
-            <label>รายละเอียดที่อยู่
-              <textarea name="addressLine" rows="2" placeholder="บ้านเลขที่ หมู่ ซอย ถนน"></textarea>
-            </label>
             <div id="authCaseManagerPreview" class="muted-box">ระบบจะแสดงข้อมูลโรงพยาบาลในพื้นที่ หลังเลือกอำเภอ</div>
             <div class="wizard-actions">
               <button class="secondary-btn" data-register-prev type="button">ย้อนกลับ</button>
