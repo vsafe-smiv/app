@@ -174,6 +174,10 @@ async function syncDataFromCloud() {
       storage.set("caseManagers", data.caseManagers || []);
       storage.set("assessments", data.assessments || []);
       storage.set("alerts", data.alerts || []);
+      
+      // เพิ่มบรรทัดนี้ เพื่อบันทึกข้อมูลตารางที่อยู่จริงจาก Google Sheets ลง Cache ของเครื่อง
+      storage.set("addressData", data.addressData || []); 
+      
       console.log("ซิงค์ข้อมูลสำเร็จ!");
       return true;
     } else {
