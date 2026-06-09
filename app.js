@@ -1477,10 +1477,10 @@ async function initUserApp() {
     
     // 4. สั่งโหลดฟอร์มและข้อมูลที่อยู่จากฐานข้อมูลจริง
     // ต้องเรียก setupUserAddressSelects หลังจาก sync ข้อมูลสำเร็จแล้วเท่านั้น
-    const registerForm = document.querySelector("#registerAccountForm");
-    if (registerForm) {
-       setupUserAddressSelects(registerForm); 
-    }
+    const regForm = document.querySelector("#registerAccountForm");
+    if (regForm) setupUserAddressSelects(regForm);
+    
+    initAuthFlow();
 
     // 5. โหลดส่วนประกอบของหน้าจอ
     initRegisterForm();
@@ -1541,3 +1541,83 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+// =========================================================
+// เพิ่มเติม: ฟังก์ชันจัดการดรอปดาวน์ที่อยู่ (สำหรับหน้า Index / ผู้ใช้)
+// =========================================================
+function setupUserAddressSelects(formScope = document) {
+  const provinceSelect = formScope.querySelector('select[name="province"]');
+  const districtSelect = formScope.querySelector('select[name="district"]');
+  const subdistrictSelect = formScope.querySelector('select[name="subdistrict"]');
+  const zipcodeInput = formScope.querySelector('input[name="zipcode"]');
+
+  if (!provinceSelect) return;
+  
+  // ดึงข้อมูลจาก storage ที่ซิงค์ไว้
+  const addressList = storage.get("addressData", []);
+  if (addressList.length === 0) {
+    console.warn("ไม่พบข้อมูล AddressData ใน Storage");
+    return;
+  }
+
+  // 1. โหลดจังหวัด
+  const uniqueProvinces = [...new Set(addressList.map(item => item.province))].filter(Boolean).sort();
+  provinceSelect.innerHTML = '<option value="">-- เลือกจังหวัด --</option>' + 
+    uniqueProvinces.map(p => `<option value="${p}">${p}</option>`).join("");
+
+  // 2. ฟังก์ชันอัปเดตอำเภอ
+  const refreshDistricts = () => {
+    if (!districtSelect) return;
+    const selectedProvince = provinceSelect.value;
+    
+    if (!selectedProvince) {
+      districtSelect.innerHTML = '<option value="">-- เลือกอำเภอ --</option>';
+      if (subdistrictSelect) subdistrictSelect.innerHTML = '<option value="">-- เลือกตำบล --</option>';
+      if (zipcodeInput) zipcodeInput.value = '';
+      return;
+    }
+
+    const filtered = addressList.filter(item => item.province === selectedProvince);
+    const uniqueAmphoes = [...new Set(filtered.map(item => item.amphoe))].filter(Boolean).sort();
+    
+    districtSelect.innerHTML = '<option value="">-- เลือกอำเภอ --</option>' +
+      uniqueAmphoes.map(a => `<option value="${a}">${a}</option>`).join("");
+    
+    if (subdistrictSelect) subdistrictSelect.innerHTML = '<option value="">-- เลือกตำบล --</option>';
+    if (zipcodeInput) zipcodeInput.value = '';
+  };
+
+  // 3. ฟังก์ชันอัปเดตตำบล
+  const refreshSubdistricts = () => {
+    if (!subdistrictSelect) return;
+    const selectedProvince = provinceSelect.value;
+    const selectedAmphoe = districtSelect.value;
+
+    if (!selectedAmphoe) {
+      subdistrictSelect.innerHTML = '<option value="">-- เลือกตำบล --</option>';
+      if (zipcodeInput) zipcodeInput.value = '';
+      return;
+    }
+
+    const filtered = addressList.filter(item => item.province === selectedProvince && item.amphoe === selectedAmphoe);
+    const uniqueTambons = [...new Set(filtered.map(item => item.tambon))].filter(Boolean).sort();
+    
+    subdistrictSelect.innerHTML = '<option value="">-- เลือกตำบล --</option>' +
+      uniqueTambons.map(t => `<option value="${t}">${t}</option>`).join("");
+    
+    if (zipcodeInput && filtered.length > 0) {
+      zipcodeInput.value = filtered[0].zipcode || "";
+    }
+  };
+
+  provinceSelect.addEventListener("change", refreshDistricts);
+  districtSelect?.addEventListener("change", refreshSubdistricts);
+  
+  subdistrictSelect?.addEventListener("change", () => {
+    const match = addressList.find(item => 
+      item.province === provinceSelect.value && 
+      item.amphoe === districtSelect.value && 
+      item.tambon === subdistrictSelect.value
+    );
+    if (zipcodeInput && match) zipcodeInput.value = match.zipcode || "";
+  });
+}
