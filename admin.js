@@ -26,7 +26,7 @@ async function initAdmin() {
   
   // ระบบ Auto-Sync เบื้องหลังทุกๆ 30 วินาที จะอัปเดตข้อมูลที่อยู่ใหม่ๆ ตามไป
   setInterval(async () => {
-    await syncDataFromCloud();
+    await syncDataFromCloud({ silent: true });
     renderDashboard();
   }, 30000);
 }
@@ -49,8 +49,8 @@ function initLogin() {
     const data = new FormData(form);
     
     // แก้ไขเพิ่มความปลอดภัย: ดึงค่าได้ทั้งกรณีที่ HTML ตั้งชื่อว่า user หรือ username
-    const username = data.get("user") || data.get("username");
-    const password = data.get("password");
+    const username = normalizeCredential(data.get("user") || data.get("username"));
+    const password = normalizeCredential(data.get("password"));
     
     if (username === "14171" && password === "14171") {
       sessionStorage.setItem("vsafe:admin", "1");
