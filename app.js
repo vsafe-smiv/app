@@ -496,9 +496,9 @@ function classifyRisk(score) {
 }
 
 function zoneClass(zone) {
-  return zone.toLowerCase();
+  if (!zone) return "green"; // หากไม่มีข้อมูล Zone ให้แสดงผลเป็นสีเขียว (Green) เป็นค่าเริ่มต้น
+  return String(zone).toLowerCase(); // แปลงเป็น String ก่อนเสมอเพื่อป้องกัน Error
 }
-
 function formatThaiDateTime(value) {
   if (!value) return "-";
   const date = new Date(value);
