@@ -918,13 +918,20 @@ function updatePatientStatus(patientCode, status) {
 // =========================================================
 // แก้ไขระบบแสดงผลรายละเอียดที่อยู่ผู้ป่วยแบบเต็มตัว ในตารางและหน้ารายละเอียด
 // =========================================================
+// 1. ฟังก์ชันแสดงรายละเอียดผู้ป่วย (ชุดที่คุณต้องการ)
 function showPatientDetail(patientCode) {
-  const row = patientCurrentRows().find((patient) => patient.patientCode === patientCode);
-  if (!row) return;
-  const cm = findCaseManager(row.district);
+  // ตรวจสอบข้อมูลจาก storage
+  const row = storage.get("patients", []).find((p) => p.patientCode === patientCode);
+  if (!row) {
+    AppDialog.alert("ไม่พบข้อมูลผู้ป่วย", "ข้อผิดพลาด", "warning");
+    return;
+  }
+
+  // หาข้อมูลผู้ดูแลและ Case Manager
+  const cm = storage.get("caseManagers", []).find(item => item.district === row.district) || null;
   const caregivers = getCaregiversByPatient(row.patientCode);
 
-  // การประกอบคำที่อยู่ให้ละเอียดชัดเจนครบถ้วนเพื่อแสดงผลในฝั่งแอดมิน
+  // ประกอบที่อยู่
   const fullAddressDisplay = [
     row.houseNo ? `เลขที่ ${row.houseNo}` : "",
     row.moo ? `ม.${row.moo}` : "",
@@ -936,20 +943,21 @@ function showPatientDetail(patientCode) {
     row.zipcode ? `${row.zipcode}` : ""
   ].filter(Boolean).join(" ");
 
+  // แสดงผล
   showAdminDetail(`
     <div class="detail-summary ${zoneClass(row.zone)}">
-      <span class="risk-badge ${zoneClass(row.zone)}">${row.zone}</span>
+      <span class="risk-badge ${zoneClass(row.zone)}">${row.zone || "GREEN"}</span>
       <h2>${escapeHtml(row.prefix || "")}${escapeHtml(row.fullName || "")}</h2>
-      <p>HN ${escapeHtml(row.hn)} | Dx ${escapeHtml(row.dx || "-")} | ${row.score} คะแนน</p>
+      <p>HN ${escapeHtml(row.hn || "-")} | Dx ${escapeHtml(row.dx || "-")} | ${row.score || 0} คะแนน</p>
     </div>
     <div class="detail-grid-admin">
       ${detailItem("รหัสผู้ป่วย", row.patientCode)}
-      ${detailItem("เพศ", row.gender)}
+      ${detailItem("เพศ", row.gender || "-")}
       ${detailItem("วันเกิด / อายุ", `${row.dob || "-"} / ${calculateAge(row.dob) || "-"} ปี`)}
       ${detailItem("วันที่จำหน่าย", row.dischargeDate ? formatThaiDateTime(row.dischargeDate) : "-")}
       ${detailItem("ประวัติความรุนแรง", row.violenceHistoryDate || "-")}
       ${detailItem("สารเสพติด", row.substanceUse === "ใช้" ? `ใช้: ${row.substanceDetail || "-"}` : "ไม่ใช้")}
-      ${detailItem("รายละเอียดที่อยู่ละเอียด", fullAddressDisplay)}
+      ${detailItem("ที่อยู่", fullAddressDisplay)}
       ${detailItem("พิกัดแผนที่", row.latlng || "-")}
       ${detailItem("สถานะการดูแล", row.status || "-")}
       ${detailItem("ศูนย์ดูแลรับผิดชอบ", cm ? `${cm.workplace} | โทร ${cm.phone}` : "ไม่พบข้อมูล")}
@@ -959,6 +967,37 @@ function showPatientDetail(patientCode) {
       ${caregivers.length ? caregivers.map((c) => `<article><strong>${escapeHtml(c.prefix || "")}${escapeHtml(c.fullName || "")}</strong><span>${escapeHtml(c.relationship || "-")} | ${escapeHtml(c.phone || "-")}</span></article>`).join("") : "<p style='color: #999;'>ไม่มีข้อมูลผู้ดูแล</p>"}
     </div>
   `);
+}
+
+// 2. ฟังก์ชันเสริม (Dependencies) เพื่อให้ฟังก์ชันข้างบนทำงานได้
+function detailItem(label, value) {
+  return `<div class="detail-item"><strong>${label}:</strong> <span>${value}</span></div>`;
+}
+
+function calculateAge(dob) {
+  if (!dob) return null;
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+  return age;
+}
+
+function formatThaiDateTime(dateString) {
+  if (!dateString) return "-";
+  return new Date(dateString).toLocaleDateString("th-TH", { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function getCaregiversByPatient(patientCode) {
+  const allCaregivers = storage.get("caregivers", []);
+  return allCaregivers.filter(cg => {
+    let codes = cg.patientCodes;
+    if (typeof codes === 'string') {
+        try { codes = JSON.parse(codes); } catch (e) { codes = []; }
+    }
+    return Array.isArray(codes) && codes.includes(patientCode);
+  });
 }
 
 function escapeHtml(unsafe) {
