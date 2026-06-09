@@ -1128,17 +1128,43 @@ function renderAlertFeed() {
 function showUnacknowledgedSos() {
   const dialog = document.querySelector("#sosDialog");
   if (!dialog) return;
-  
+
   const alert = storage.get("alerts", []).find((item) => item.zone === "RED" && !item.acknowledged);
+  
+  // ถ้าไม่มี Alert ค้างอยู่ ให้ปิด Dialog แล้วจบการทำงาน
   if (!alert) {
     if (dialog.open) dialog.close();
     return;
   }
 
-  // ผูกปุ่มดูข้อมูลให้ทำงานร่วมกับฟังก์ชันรับทราบ
-  const viewBtn = dialog.querySelector(".view-patient-btn");
+  // อัปเดตรายละเอียดผู้ป่วยใน Popup
+  const detail = document.querySelector("#sosDetail");
+  if (detail) {
+    detail.innerHTML = `ผู้ป่วย HN: ${escapeHtml(alert.hn || "-")} <br> คะแนน: ${alert.score} <br> พื้นที่: ${escapeHtml(alert.district || "-")}`;
+  }
+
+  // --- ส่วนแก้ไข: ป้องกัน TypeError ---
+  const ackBtn = document.querySelector("#ackSos");
+  if (ackBtn) {
+    ackBtn.onclick = () => acknowledgeSos(alert.alertId);
+  } else {
+    console.error("ไม่พบปุ่ม #ackSos ในหน้า admin.html");
+  }
+
+  // จัดการปุ่มดูข้อมูลผู้ป่วย
+  const modal = dialog.querySelector(".sos-modal");
+  let viewBtn = modal.querySelector(".view-patient-btn");
+  
+  if (!viewBtn) {
+    viewBtn = document.createElement("button");
+    viewBtn.className = "secondary-btn wide view-patient-btn";
+    viewBtn.style.marginTop = "10px";
+    viewBtn.textContent = "🔍 ดูข้อมูลผู้ป่วย";
+    modal.appendChild(viewBtn);
+  }
+  
   viewBtn.onclick = () => {
-    acknowledgeSos(alert.alertId); // รับทราบทันทีที่กดดู
+    acknowledgeSos(alert.alertId); // กดดู = รับทราบภารกิจทันที
     dialog.close();
     showPatientDetail(alert.patientCode);
   };
