@@ -1781,12 +1781,15 @@ textarea:focus {
 
 .alert-item {
     display: flex;
-    align-items: center; /* จัดกลางในแนวตั้ง */
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-left: 6px solid #cbd5e1; /* เส้นขอบซ้ายหนาขึ้น */
+    align-items: center;
+    /* เปลี่ยนจากสีขาวเป็นโทนสีน้ำเงินเข้มโปร่งแสง */
+    background: rgba(30, 41, 59, 0.7); 
+    /* เพิ่มขอบจางๆ ให้ดูมีมิติ */
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+    border-left: 6px solid #cbd5e1;
     border-radius: 0.5rem;
     padding: 0.6rem 1rem;
+    color: #f1f5f9; /* เปลี่ยนสีตัวอักษรเป็นสีขาว/เทาสว่าง */
     transition: transform 0.1s ease;
 }
 
@@ -1814,19 +1817,20 @@ textarea:focus {
 }
 .alert-info strong {
     font-size: 0.9rem;
-    color: #1e293b;
+    color: #ffffff; /* เปลี่ยนเป็นสีขาว */
     line-height: 1.2;
 }
+
 .alert-info small {
     font-size: 0.75rem;
-    color: #64748b;
+    color: #cbd5e1; /* เปลี่ยนเป็นสีเทาสว่าง */
     margin-top: 2px;
 }
 
 /* วันที่-เวลา (ชิดขวาสุด) */
 .alert-timestamp {
     font-size: 0.75rem;
-    color: #94a3b8;
+    color: #94a3b8; /* สีเทาสำหรับเวลา */
     white-space: nowrap;
     margin-left: 1rem;
     text-align: right;
