@@ -1128,8 +1128,41 @@ function renderAlertFeed() {
 function showUnacknowledgedSos() {
   const dialog = document.querySelector("#sosDialog");
   if (!dialog) return;
+
+  // หา alert ที่ยังไม่ได้รับทราบ (RED ZONE)
   const alert = storage.get("alerts", []).find((item) => item.zone === "RED" && !item.acknowledged);
-  if (!alert) return;
+  
+  if (!alert) {
+    if (dialog.open) dialog.close();
+    return;
+  }
+
+  // แสดงรายละเอียด
+  const detail = document.querySelector("#sosDetail");
+  if (detail) {
+    detail.innerHTML = `ผู้ป่วย HN: ${escapeHtml(alert.hn)} | คะแนน: ${alert.score} <br>พื้นที่: ${escapeHtml(alert.district)}`;
+  }
+
+  // ปุ่มกดดูข้อมูลผู้ป่วย
+  const modal = dialog.querySelector(".sos-modal");
+  // ลบปุ่มเดิม (ถ้ามี) เพื่อป้องกันซ้ำ
+  const existingBtn = modal.querySelector(".view-patient-btn");
+  if (existingBtn) existingBtn.remove();
+
+  const viewBtn = document.createElement("button");
+  viewBtn.className = "secondary-btn wide view-patient-btn";
+  viewBtn.style.marginTop = "10px";
+  viewBtn.textContent = "🔍 ดูข้อมูลผู้ป่วย";
+  viewBtn.onclick = () => {
+    dialog.close();
+    showPatientDetail(alert.patientCode); // เรียกฟังก์ชันแสดงรายละเอียด
+  };
+  modal.appendChild(viewBtn);
+
+  // ผูกปุ่มรับทราบใหม่ (ส่ง alertId ไปด้วย)
+  const ackBtn = document.querySelector("#ackSos");
+  ackBtn.onclick = () => acknowledgeSos(alert.alertId);
+
   if (!dialog.open) dialog.showModal();
   startAlarm();
 }
@@ -1151,7 +1184,21 @@ function startAlarm() {
 }
 
 function stopAlarm() { if (alarmTimer) clearInterval(alarmTimer); alarmTimer = null; }
-function acknowledgeSos() {
-  const alerts = storage.get("alerts", []).map((alert) => (alert.zone === "RED" ? { ...alert, acknowledged: true, status: alert.status || "รอการช่วยเหลือ" } : alert));
-  storage.set("alerts", alerts); stopAlarm(); document.querySelector("#sosDialog")?.close(); renderAlertFeed(); renderDashboardAlerts();
+// แก้ไขฟังก์ชันนี้ใน admin.js
+async function acknowledgeSos(alertId) {
+  if (!alertId) return;
+
+  // 1. อัปเดตใน Local Storage ทันที
+  const alerts = storage.get("alerts", []).map((alert) => 
+    (alert.alertId === alertId ? { ...alert, acknowledged: true, status: alert.status || "รับทราบภารกิจแล้ว" } : alert)
+  );
+  storage.set("alerts", alerts);
+
+  // 2. ส่งค่าไปอัปเดตที่ Google Sheets (สำคัญมากเพื่อป้องกันการเตือนซ้ำ)
+  await apiPost("acknowledgeAlert", { alertId: alertId });
+
+  stopAlarm();
+  document.querySelector("#sosDialog")?.close();
+  renderAlertFeed();
+  renderDashboardAlerts();
 }
