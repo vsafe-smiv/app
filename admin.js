@@ -213,7 +213,7 @@ function showPatientForm(patient = null) {
   const form = document.querySelector("#patientForm");
   if (!card || !form) return;
   form.reset();
-  document.querySelector("#patientFormTitle").textContent = patient ? "แก้ไขข้อมูลผู้ป่วย" : "ลงทะเบียนผู้ป่วย";
+  document.querySelector("#patientFormHeading").textContent = patient ? "แก้ไขข้อมูลผู้ป่วย" : "ลงทะเบียนผู้ป่วย";
   form.elements.editingKey.value = patient?.patientCode || "";
   if (patient) {
     ["patientCode","hn","prefix","fullName","gender","dob","violenceHistoryDate","substanceUse","substanceDetail","dx","dischargeDate","baselineScore","zipcode","addressLine","latlng"].forEach((name) => {
@@ -940,36 +940,3 @@ function acknowledgeSos() {
 }
 
 document.addEventListener("DOMContentLoaded", initAdmin);
-function showPatientForm(patient = null) {
-  const card = document.querySelector("#patientFormCard");
-  const form = document.querySelector("#patientForm");
-  
-  // เพิ่มตัวแปรเช็ค element ก่อน
-  const titleEl = document.querySelector("#patientFormTitle");
-
-  if (!card || !form) return;
-  
-  form.reset();
-  
-  // แก้ไขจุดที่ Error: เพิ่ม if(titleEl) เพื่อป้องกันโปรแกรมพังถ้าหา ID ไม่เจอ
-  if (titleEl) {
-    titleEl.textContent = patient ? "แก้ไขข้อมูลผู้ป่วย" : "ลงทะเบียนผู้ป่วย";
-  } else {
-    console.warn("ไม่พบ element #patientFormTitle ในหน้า HTML");
-  }
-
-  form.elements.editingKey.value = patient?.patientCode || "";
-  if (patient) {
-    ["patientCode","hn","prefix","fullName","gender","dob","violenceHistoryDate","substanceUse","substanceDetail","dx","dischargeDate","baselineScore","zipcode","addressLine","latlng"].forEach((name) => {
-      if (form.elements[name]) form.elements[name].value = patient[name] || "";
-    });
-    setAddressFormValues(form, patient);
-    updatePatientLatLng(form);
-  } else {
-    setupAddressSelects(document);
-    updatePatientLatLng(form);
-  }
-  card.classList.remove("hidden");
-  card.classList.add("form-reveal");
-  card.scrollIntoView({ behavior: "smooth", block: "start" });
-}
