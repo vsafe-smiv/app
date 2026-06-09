@@ -1128,40 +1128,20 @@ function renderAlertFeed() {
 function showUnacknowledgedSos() {
   const dialog = document.querySelector("#sosDialog");
   if (!dialog) return;
-
-  // หา alert ที่ยังไม่ได้รับทราบ (RED ZONE)
-  const alert = storage.get("alerts", []).find((item) => item.zone === "RED" && !item.acknowledged);
   
+  const alert = storage.get("alerts", []).find((item) => item.zone === "RED" && !item.acknowledged);
   if (!alert) {
     if (dialog.open) dialog.close();
     return;
   }
 
-  // แสดงรายละเอียด
-  const detail = document.querySelector("#sosDetail");
-  if (detail) {
-    detail.innerHTML = `ผู้ป่วย HN: ${escapeHtml(alert.hn)} | คะแนน: ${alert.score} <br>พื้นที่: ${escapeHtml(alert.district)}`;
-  }
-
-  // ปุ่มกดดูข้อมูลผู้ป่วย
-  const modal = dialog.querySelector(".sos-modal");
-  // ลบปุ่มเดิม (ถ้ามี) เพื่อป้องกันซ้ำ
-  const existingBtn = modal.querySelector(".view-patient-btn");
-  if (existingBtn) existingBtn.remove();
-
-  const viewBtn = document.createElement("button");
-  viewBtn.className = "secondary-btn wide view-patient-btn";
-  viewBtn.style.marginTop = "10px";
-  viewBtn.textContent = "🔍 ดูข้อมูลผู้ป่วย";
+  // ผูกปุ่มดูข้อมูลให้ทำงานร่วมกับฟังก์ชันรับทราบ
+  const viewBtn = dialog.querySelector(".view-patient-btn");
   viewBtn.onclick = () => {
+    acknowledgeSos(alert.alertId); // รับทราบทันทีที่กดดู
     dialog.close();
-    showPatientDetail(alert.patientCode); // เรียกฟังก์ชันแสดงรายละเอียด
+    showPatientDetail(alert.patientCode);
   };
-  modal.appendChild(viewBtn);
-
-  // ผูกปุ่มรับทราบใหม่ (ส่ง alertId ไปด้วย)
-  const ackBtn = document.querySelector("#ackSos");
-  ackBtn.onclick = () => acknowledgeSos(alert.alertId);
 
   if (!dialog.open) dialog.showModal();
   startAlarm();
@@ -1222,13 +1202,27 @@ function getCaregiversByPatient(patientCode) {
     return Array.isArray(codes) && codes.includes(patientCode);
   });
 }
+// --- ส่วนที่ 1: ฟังก์ชันแสดงรายละเอียด (ต้องมีเพื่อให้เรียกใช้ได้) ---
 function showAdminDetail(htmlContent) {
-  const dialog = document.getElementById("adminDetailDialog");
-  const content = document.getElementById("adminDetailContent");
+  const dialog = document.querySelector("#adminDetailDialog");
+  const content = document.querySelector("#adminDetailContent");
+  
   if (dialog && content) {
     content.innerHTML = htmlContent;
     dialog.showModal();
   } else {
-    console.error("ไม่พบ element สำหรับแสดงรายละเอียดผู้ป่วย");
+    console.error("ไม่พบ Dialog หรือ Content");
   }
 }
+
+// --- ส่วนที่ 2: ผูก Event ปิด Dialog (แนะนำให้ครอบด้วย DOMContentLoaded) ---
+document.addEventListener('DOMContentLoaded', () => {
+  const closeBtn = document.querySelector(".admin-dialog-close");
+  const dialog = document.querySelector("#adminDetailDialog");
+  
+  if (closeBtn && dialog) {
+    closeBtn.addEventListener("click", () => {
+      dialog.close();
+    });
+  }
+});
