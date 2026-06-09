@@ -82,17 +82,6 @@ const addressData = [
   ["นครสวรรค์", "ชุมตาบง", "ชุมตาบง", "60150"]
 ];
 
-const seedCaseManagers = [
-  { id: "CM-001", prefix: "นาง", fullName: "ศิริพร ใจมั่น", position: "Case manager", workplace: "รพ.จิตเวชนครสวรรค์ฯ", province: "นครสวรรค์", district: "เมืองนครสวรรค์", phone: "056990888" },
-  { id: "CM-002", prefix: "นาย", fullName: "ธนกฤต สุขสวัสดิ์", position: "Case manager", workplace: "เครือข่ายสุขภาพจิตเขต 3", province: "นครสวรรค์", district: "ตาคลี", phone: "0894561122" },
-  { id: "CM-003", prefix: "นางสาว", fullName: "ปรียา แสงทอง", position: "Case manager", workplace: "ทีม SMI-V ชุมชน", province: "นครสวรรค์", district: "ชุมแสง", phone: "0882194440" }
-];
-
-const seedPatients = [
-  { patientCode: "6600123SMIV", hn: "6600123", prefix: "นาย", fullName: "สมชาย ใจดี", gender: "ชาย", dob: "1987-05-18", violenceHistoryDate: "2025-12-10", substanceUse: "ไม่ใช้", substanceDetail: "", dx: "F20.0", dischargeDate: "2026-04-22", baselineScore: 4, province: "นครสวรรค์", district: "เมืองนครสวรรค์", subdistrict: "ปากน้ำโพ", zipcode: "60000", addressLine: "12 หมู่ 1", latlng: "15.70,100.13", status: "ติดตามต่อเนื่อง" },
-  { patientCode: "6500456SMIV", hn: "6500456", prefix: "นาย", fullName: "วิทยา ทองดี", gender: "ชาย", dob: "1991-09-02", violenceHistoryDate: "2026-01-18", substanceUse: "ใช้", substanceDetail: "สุรา", dx: "F20.9", dischargeDate: "2026-04-28", baselineScore: 10, province: "นครสวรรค์", district: "ตาคลี", subdistrict: "ตาคลี", zipcode: "60140", addressLine: "45 หมู่ 3", latlng: "15.26,100.34", status: "เฝ้าระวัง" },
-  { patientCode: "6400789SMIV", hn: "6400789", prefix: "นางสาว", fullName: "มาลี รักสงบ", gender: "หญิง", dob: "1984-11-12", violenceHistoryDate: "2026-02-03", substanceUse: "ไม่ใช้", substanceDetail: "", dx: "F25.0", dischargeDate: "2026-04-30", baselineScore: 15, province: "นครสวรรค์", district: "ชุมแสง", subdistrict: "เกยไชย", zipcode: "60120", addressLine: "88 หมู่ 5", latlng: "15.88,100.30", status: "รอการติดต่อ" }
-];
 
 let registerDraftPatients = [];
 let selectedPatientDetailCode = null;
@@ -157,6 +146,7 @@ const zoneAdvice = {
   }
 };
 
+// ระบบ Local Cache สำหรับให้แอปทำงานลื่นไหล (อ่านจาก Cache แทนการรอเน็ต)
 const storage = {
   get(key, fallback) {
     try {
@@ -171,55 +161,6 @@ const storage = {
   }
 };
 
-function ensureSeedData() {
-  if (!storage.get("patients", null)) storage.set("patients", seedPatients);
-  else mergeSeedPatients();
-  if (!storage.get("caseManagers", null)) storage.set("caseManagers", seedCaseManagers);
-  if (!storage.get("caregivers", null)) storage.set("caregivers", []);
-  ensureDemoCaregiver();
-  if (!storage.get("assessments", null)) {
-    const now = Date.now();
-    storage.set("assessments", [
-      makeAssessment(seedPatients[0], 4, "GREEN", new Date(now - 86400000 * 5).toISOString()),
-      makeAssessment(seedPatients[1], 10, "YELLOW", new Date(now - 86400000 * 2).toISOString()),
-      makeAssessment(seedPatients[2], 15, "RED", new Date(now - 3600000).toISOString())
-    ]);
-  }
-}
-
-function mergeSeedPatients() {
-  const patients = storage.get("patients", []);
-  seedPatients.forEach((seed) => {
-    const index = patients.findIndex((patient) => patient.hn === seed.hn || normalizePatientCode(patient.patientCode) === normalizePatientCode(seed.patientCode));
-    if (index >= 0) patients[index] = { ...seed, ...patients[index], patientCode: seed.patientCode };
-    else patients.push(seed);
-  });
-  storage.set("patients", patients);
-}
-
-function ensureDemoCaregiver() {
-  const caregivers = storage.get("caregivers", []);
-  if (caregivers.some((caregiver) => caregiver.username === "14171")) return;
-  caregivers.push({
-    id: "CG-DEMO-14171",
-    username: "14171",
-    password: "14171",
-    prefix: "นาง",
-    fullName: "ผู้ดูแลทดลอง",
-    gender: "หญิง",
-    relationship: "บุตร",
-    phone: "0814171417",
-    province: "นครสวรรค์",
-    district: "เมืองนครสวรรค์",
-    subdistrict: "ปากน้ำโพ",
-    zipcode: "60000",
-    addressLine: "บัญชีทดลอง",
-    patientCodes: [seedPatients[0].patientCode],
-    activePatientCode: seedPatients[0].patientCode,
-    createdAt: new Date().toISOString()
-  });
-  storage.set("caregivers", caregivers);
-}
 
 function getCaregivers() {
   return storage.get("caregivers", []);
