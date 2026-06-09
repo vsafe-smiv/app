@@ -1077,12 +1077,11 @@ function initAssessmentForm() {
     // 2. คำนวณคะแนน (Raw Score + Baseline Score)
     const answers = {};
     const rawScore = riskDomains.reduce((sum, item) => {
-      const value = Number(form.querySelector(`input[name="${item.key}"]:checked`)?.value || 0);
-      answers[item.key] = value;
-      return sum + value;
-    }, 0);
+    const value = Number(form.querySelector(`input[name="${item.key}"]:checked`)?.value || 0);
+    answers[item.key] = value;
+    return sum + value;
+  }, 0);
 
-    const baselineScore = Number(patient.baselineScore || 0);
     const finalScore = rawScore + baselineScore; // รวมคะแนนฐานเดิม
     const zone = classifyRisk(finalScore);
     
@@ -1477,7 +1476,7 @@ async function initUserApp() {
   initAuthFlow();
   initRegisterForm();
   renderAssessmentItems();
-  initAssessmentForm();
+  ();
   renderKnowledge();
   initSosButtons();
   renderAuthenticatedApp();
