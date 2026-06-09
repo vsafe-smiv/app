@@ -525,8 +525,8 @@ async function lookupPatientToPreview(inputSelector, previewSelector) {
     upsertPatient(patient);
   }
   if (!patient) {
-    preview.innerHTML = `<strong style="color: var(--red)">ไม่พบรหัสผู้ป่วยนี้</strong><br>กรุณาตรวจสอบกับโรงพยาบาลในพื้นที่`;
-    return null;
+    AppDialog.alert("ไม่พบรหัสผู้ป่วย กรุณาตรวจสอบการลงทะเบียน", "ข้อผิดพลาด", "warning");
+    return;
   }
   preview.innerHTML = patientPreviewHtml(patient);
   if (inputSelector === "#authPatientCodeLookup") populatePatientEdit(patient);
@@ -609,9 +609,9 @@ function initAuthFlow() {
     const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
     const caregiver = getCaregivers().find((item) => item.username === payload.username && item.password === payload.password);
     if (!caregiver) {
-      alert("Username หรือ Password ไม่ถูกต้อง");
-      return;
-    }
+    AppDialog.alert("Username หรือ Password ไม่ถูกต้อง", "เข้าสู่ระบบล้มเหลว", "warning");
+    return;
+  }
     setCurrentCaregiver(caregiver);
   });
 
@@ -619,18 +619,18 @@ function initAuthFlow() {
     event.preventDefault();
     const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
     if (payload.password !== payload.confirmPassword) {
-      alert("Password และยืนยัน Password ไม่ตรงกัน");
-      return;
-    }
-    if (getCaregivers().some((caregiver) => caregiver.username === payload.username)) {
-      alert("Username นี้ถูกใช้แล้ว กรุณาเลือกชื่อผู้ใช้อื่น");
-      return;
-    }
-    if (!registerDraftPatients.length) await addDraftPatientFromInput();
-    if (!registerDraftPatients.length) {
-      alert("กรุณาเพิ่มผู้ป่วยอย่างน้อย 1 คนก่อนลงทะเบียน");
-      return;
-    }
+    AppDialog.alert("Password และยืนยัน Password ไม่ตรงกัน", "ข้อมูลไม่ถูกต้อง", "warning");
+    return;
+  }
+  if (getCaregivers().some((caregiver) => caregiver.username === payload.username)) {
+    AppDialog.alert("Username นี้ถูกใช้แล้ว กรุณาเลือกชื่อผู้ใช้อื่น", "ชื่อผู้ใช้ซ้ำ", "warning");
+    return;
+  }
+  if (!registerDraftPatients.length) await addDraftPatientFromInput();
+  if (!registerDraftPatients.length) {
+    AppDialog.alert("กรุณาเพิ่มผู้ป่วยอย่างน้อย 1 คนก่อนลงทะเบียน", "ข้อมูลไม่ครบ", "warning");
+    return;
+  }
 
     const caregiver = {
       id: `CG-${Date.now()}`,
@@ -715,23 +715,21 @@ async function validateRegisterStep(step) {
       return false;
     }
   }
-  
   if (step === 2) {
     const payload = Object.fromEntries(new FormData(form).entries());
     if (payload.password !== payload.confirmPassword) {
-      alert("Password และยืนยัน Password ไม่ตรงกัน");
+      AppDialog.alert("Password และยืนยัน Password ไม่ตรงกัน", "ข้อมูลไม่ถูกต้อง", "warning");
       return false;
     }
     if (getCaregivers().some((caregiver) => caregiver.username === payload.username)) {
-      alert("Username นี้ถูกใช้แล้ว กรุณาเลือกชื่อผู้ใช้อื่น");
+      AppDialog.alert("Username นี้ถูกใช้แล้ว กรุณาเลือกชื่อผู้ใช้อื่น", "ข้อมูลไม่ถูกต้อง", "warning");
       return false;
     }
   }
-  
   if (step === 4) {
     if (!registerDraftPatients.length) await addDraftPatientFromInput();
     if (!registerDraftPatients.length) {
-      alert("กรุณาเพิ่มผู้ป่วยอย่างน้อย 1 คน");
+      AppDialog.alert("กรุณาเพิ่มผู้ป่วยอย่างน้อย 1 คน", "ข้อมูลไม่ครบ", "warning");
       return false;
     }
   }
@@ -740,7 +738,7 @@ async function validateRegisterStep(step) {
 
 async function addDraftPatientFromInput() {
   if (registerDraftPatients.length >= 3) {
-    alert("เพิ่มผู้ป่วยได้สูงสุด 3 คน");
+    AppDialog.alert("เพิ่มผู้ป่วยได้สูงสุด 3 คน", "จำกัดจำนวน", "warning");
     return null;
   }
   const patient = await lookupPatientToPreview("#authPatientCodeLookup", "#authPatientPreview");
@@ -748,7 +746,7 @@ async function addDraftPatientFromInput() {
   const reviewedPatient = patientFromEdit(patient);
   upsertPatient(reviewedPatient);
   if (registerDraftPatients.some((item) => item.patientCode === reviewedPatient.patientCode)) {
-    alert("ผู้ป่วยรายนี้ถูกเพิ่มแล้ว");
+    AppDialog.alert("ผู้ป่วยรายนี้ถูกเพิ่มแล้ว", "ข้อมูลซ้ำ", "info");
     return reviewedPatient;
   }
   registerDraftPatients.push(reviewedPatient);
@@ -993,25 +991,25 @@ function initRegisterForm() {
     event.preventDefault();
     const caregiver = getCurrentCaregiver();
     if (!caregiver) {
-      alert("กรุณาเข้าสู่ระบบก่อนเพิ่มผู้ป่วย");
-      return;
-    }
+    AppDialog.alert("กรุณาเข้าสู่ระบบก่อนเพิ่มผู้ป่วย", "คำเตือน", "warning");
+    return;
+  }
     const form = new FormData(event.currentTarget);
     const payload = Object.fromEntries(form.entries());
     const patient = findPatient(payload.patientCode);
     if (!patient) {
-      alert("ยังไม่พบรหัสผู้ป่วย กรุณากดตรวจสอบข้อมูลก่อน");
-      return;
-    }
+    AppDialog.alert("ยังไม่พบรหัสผู้ป่วย กรุณากดตรวจสอบข้อมูลก่อน", "ข้อผิดพลาด", "warning");
+    return;
+  }
     const patientCodes = caregiver.patientCodes || [];
     if (patientCodes.includes(patient.patientCode)) {
-      alert("ผู้ป่วยรายนี้อยู่ในบัญชีของคุณแล้ว");
-      return;
-    }
-    if (patientCodes.length >= 3) {
-      alert("เพิ่มผู้ป่วยได้สูงสุด 3 คนต่อบัญชี");
-      return;
-    }
+    AppDialog.alert("ผู้ป่วยรายนี้อยู่ในบัญชีของคุณแล้ว", "ข้อมูลซ้ำ", "info");
+    return;
+  }
+  if (patientCodes.length >= 3) {
+    AppDialog.alert("เพิ่มผู้ป่วยได้สูงสุด 3 คนต่อบัญชี", "จำกัดจำนวน", "warning");
+    return;
+  }
     const updated = updateCurrentCaregiver({
       ...payload,
       patientCodes: [...patientCodes, patient.patientCode],
@@ -1068,13 +1066,13 @@ function initAssessmentForm() {
     const patientCode = new FormData(form).get("patientCode").trim();
     const patient = findPatient(patientCode);
     if (!patient) {
-      alert("ไม่พบรหัสผู้ป่วย กรุณาตรวจสอบการลงทะเบียน");
-      return;
-    }
+    AppDialog.alert("ไม่พบรหัสผู้ป่วย กรุณาตรวจสอบการลงทะเบียน", "ข้อผิดพลาด", "warning");
+    return;
+  }
     if (!getLinkedPatients().some((item) => item.patientCode === patientCode)) {
-      alert("ผู้ป่วยรายนี้ไม่ได้อยู่ในบัญชีของคุณ");
-      return;
-    }
+    AppDialog.alert("ผู้ป่วยรายนี้ไม่ได้อยู่ในบัญชีของคุณ", "ข้อผิดพลาด", "warning");
+    return;
+  }
 
     const answers = {};
     const score = riskDomains.reduce((sum, item) => {
@@ -1413,9 +1411,9 @@ function initSosButtons() {
   document.querySelector("#homeSos")?.addEventListener("click", async () => {
     const latestPatient = getActivePatient();
     if (!latestPatient) {
-      alert("กรุณาเพิ่มผู้ป่วยก่อนใช้ SOS");
-      return;
-    }
+    AppDialog.alert("กรุณาเพิ่มผู้ป่วยก่อนใช้ฟังก์ชัน SOS", "ไม่สามารถดำเนินการได้", "warning");
+    return;
+  }
     const cm = findCaseManager(latestPatient?.district);
     const alerts = storage.get("alerts", []);
     alerts.unshift({
