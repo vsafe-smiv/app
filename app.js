@@ -275,7 +275,7 @@ function clearCloudDataCache() {
 }
 
 async function syncDataFromCloud(options = {}) {
-  const { silent = false, message = "กำลังโหลดข้อมูลจากฐานข้อมูลจริง" } = options;
+  const { silent = false, message = "กำลังโหลดข้อมูล" } = options;
   if (!silent) AppLoading.show(message);
   try {
     const response = await fetch(`${VSAFE_GAS_URL}?action=getAllData`);
@@ -305,7 +305,7 @@ async function syncDataFromCloud(options = {}) {
 }
 
 async function apiPost(action, payload) {
-  AppLoading.show("กำลังบันทึกข้อมูลลงฐานข้อมูลจริง");
+  AppLoading.show("กำลังบันทึกข้อมูล");
   try {
     const body = new URLSearchParams({ action, payload: JSON.stringify(payload) });
     const response = await fetch(VSAFE_GAS_URL, { method: "POST", body });
@@ -323,7 +323,7 @@ async function apiPost(action, payload) {
   }
 }
 
-async function saveToCloudOrAlert(action, payload, message = "ไม่สามารถบันทึกข้อมูลลงฐานข้อมูลจริงได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่") {
+async function saveToCloudOrAlert(action, payload, message = "ไม่สามารถบันทึกข้อมูลลงได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่") {
   const result = await apiPost(action, payload);
   if (!result.ok) {
     await AppDialog.alert(`${message}\n\nรายละเอียด: ${result.error || "ไม่ทราบสาเหตุ"}`, "บันทึกไม่สำเร็จ", "warning");
@@ -394,7 +394,7 @@ async function setActivePatient(patientCode) {
     return;
   }
   const updated = { ...caregiver, activePatientCode: patientCode, updatedAt: thaiTimestamp() };
-  const saved = await saveToCloudOrAlert("saveCaregiver", updated, "ไม่สามารถบันทึกผู้ป่วยที่เลือกลงฐานข้อมูลจริงได้");
+  const saved = await saveToCloudOrAlert("saveCaregiver", updated, "ไม่สามารถบันทึกผู้ป่วยที่เลือกได้");
   if (!saved) return;
   storage.set("currentCaregiverId", updated.id);
   renderPatientPanels();
@@ -781,7 +781,7 @@ function initAuthFlow() {
       activePatientCode: registerDraftPatients[0].patientCode,
       createdAt: thaiTimestamp()
     };
-    const saved = await saveToCloudOrAlert("saveCaregiver", caregiver, "ไม่สามารถสร้างบัญชีผู้ดูแลในฐานข้อมูลจริงได้");
+    const saved = await saveToCloudOrAlert("saveCaregiver", caregiver, "ไม่สามารถสร้างบัญชีผู้ดูแลได้");
     if (!saved) return;
     registerDraftPatients = [];
     renderDraftPatients();
@@ -1171,7 +1171,7 @@ function initRegisterForm() {
       activePatientCode: patient.patientCode
     };
     updated.updatedAt = thaiTimestamp();
-    const saved = await saveToCloudOrAlert("saveCaregiver", updated, "ไม่สามารถเพิ่มผู้ป่วยเข้าบัญชีในฐานข้อมูลจริงได้");
+    const saved = await saveToCloudOrAlert("saveCaregiver", updated, "ไม่สามารถเพิ่มผู้ป่วยเข้าบัญชีได้");
     if (!saved) return;
     storage.set("currentCaregiverId", updated.id);
     event.currentTarget.reset();
@@ -1257,7 +1257,7 @@ function initAssessmentForm() {
     const assessment = makeAssessment(patient, finalScore, zone, thaiTimestamp(), answers);
 
     // 4. บันทึกลงฐานข้อมูลจริงก่อน แล้วค่อย sync กลับมาแสดงผล
-    const assessmentSaved = await saveToCloudOrAlert("saveAssessment", assessment, "ไม่สามารถบันทึกผลประเมินลงฐานข้อมูลจริงได้");
+    const assessmentSaved = await saveToCloudOrAlert("saveAssessment", assessment, "ไม่สามารถบันทึกผลประเมินได้");
     if (!assessmentSaved) return;
 
     // 5. หากเป็น RED ZONE ฝั่ง Apps Script จะสร้าง Alert ในชีต Alerts ให้พร้อมกับ saveAssessment
@@ -1595,7 +1595,7 @@ function initSosButtons() {
       createdAt: thaiTimestamp(),
       acknowledged: false
     };
-    const saved = await saveToCloudOrAlert("saveAlert", alertRecord, "ไม่สามารถบันทึก SOS ลงฐานข้อมูลจริงได้");
+    const saved = await saveToCloudOrAlert("saveAlert", alertRecord, "ไม่สามารถบันทึก SOS ได้");
     if (!saved) return;
     window.location.href = `tel:${cm?.phone || "1669"}`;
   });
@@ -1620,7 +1620,7 @@ async function initUserApp() {
     // 2. สั่งซิงค์ข้อมูลจาก Cloud ก่อนเสมอ (สำคัญมาก: ห้ามข้ามขั้นตอนนี้)
     const synced = await syncDataFromCloud();
     if (!synced) {
-      console.warn("ไม่สามารถเชื่อมต่อฐานข้อมูลจริงได้ ระบบจะไม่ใช้ข้อมูลเก่าในเครื่อง");
+      console.warn("ไม่สามารถเชื่อมต่อฐานข้อมูลได้");
     }
 
     // 3. เริ่มต้นระบบ UI และ Navigation
