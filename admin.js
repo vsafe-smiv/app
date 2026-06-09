@@ -216,8 +216,11 @@ function showPatientForm(patient = null) {
   document.querySelector("#patientFormHeading").textContent = patient ? "แก้ไขข้อมูลผู้ป่วย" : "ลงทะเบียนผู้ป่วย";
   form.elements.editingKey.value = patient?.patientCode || "";
   if (patient) {
-    ["patientCode","hn","prefix","fullName","gender","dob","violenceHistoryDate","substanceUse","substanceDetail","dx","dischargeDate","baselineScore","zipcode","addressLine","latlng"].forEach((name) => {
-      if (form.elements[name]) form.elements[name].value = patient[name] || "";
+    ["patientCode", "hn", "prefix", "fullName", "gender", "dob", 
+     "violenceHistoryDate", "substanceUse", "substanceDetail", 
+     "dx", "dischargeDate", "baselineScore", "zipcode", 
+     "houseNo", "moo", "villageName", "road", "latlng"].forEach((name) => {
+       if (form.elements[name]) form.elements[name].value = patient[name] || "";
     });
     setAddressFormValues(form, patient);
     updatePatientLatLng(form);
@@ -937,6 +940,35 @@ function stopAlarm() { if (alarmTimer) clearInterval(alarmTimer); alarmTimer = n
 function acknowledgeSos() {
   const alerts = storage.get("alerts", []).map((alert) => (alert.zone === "RED" ? { ...alert, acknowledged: true, status: alert.status || "รอการช่วยเหลือ" } : alert));
   storage.set("alerts", alerts); stopAlarm(); document.querySelector("#sosDialog")?.close(); renderAlertFeed(); renderDashboardAlerts();
+}
+// ฟังก์ชันรวมที่อยู่สำหรับส่งไปหาพิกัด
+function getFullAddressForGeocoding() {
+  const form = document.querySelector("#patientForm");
+  const province = form.elements['province']?.value || "";
+  const district = form.elements['district']?.value || "";
+  const subdistrict = form.elements['subdistrict']?.value || "";
+  
+  const houseNo = form.elements['houseNo']?.value || "";
+  const moo = form.elements['moo']?.value ? "ม." + form.elements['moo']?.value : "";
+  const village = form.elements['villageName']?.value || "";
+  const road = form.elements['road']?.value ? "ถ." + form.elements['road']?.value : "";
+
+  // รวมเป็นข้อความเต็ม
+  return `${houseNo} ${moo} ${village} ${road} ต.${subdistrict} อ.${district} จ.${province}`;
+}
+
+// เพิ่ม Event Listener ใน initAdminForms หรือจุดที่เหมาะสม
+function initAddressAutoGeocode() {
+  const form = document.querySelector("#patientForm");
+  const fields = ['province', 'district', 'subdistrict', 'houseNo', 'moo', 'villageName', 'road'];
+  
+  fields.forEach(name => {
+    form.elements[name]?.addEventListener('input', () => {
+      const fullAddress = getFullAddressForGeocoding();
+      // สมมติว่าคุณมีฟังก์ชันอัปเดตพิกัดเดิมอยู่แล้ว
+      // updatePatientLatLng(form, fullAddress); 
+    });
+  });
 }
 
 document.addEventListener("DOMContentLoaded", initAdmin);
