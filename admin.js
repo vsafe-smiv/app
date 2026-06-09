@@ -604,13 +604,13 @@ function renderDashboardAlerts() {
         
         return `
           <article class="alert-item ${borderClass}">
-            <div class="time-dot-col">
-                <span class="alert-time">${timeStr}</span>
-                <div class="status-dot"></div>
+            <div class="status-dot"></div>
+            <div class="alert-info">
+              <strong>${alert.zone} ZONE | HN ${escapeHtml(alert.hn || "-")} | ${escapeHtml(alert.dx || "-")}</strong>
+              <small>${alert.score} คะแนน | ${escapeHtml(alert.district || "-")} | ${escapeHtml(alert.status || "-")}</small>
             </div>
-            <div class="alert-content">
-                <div class="alert-header">${alert.zone} ZONE | HN ${escapeHtml(alert.hn || "-")} | ${escapeHtml(alert.dx || "-")}</div>
-                <div class="alert-subheader">คะแนน ${escapeHtml(alert.score ?? "-")} | ${escapeHtml(alert.district || "-")} | ${escapeHtml(alert.status || "-")}</div>
+            <div class="alert-timestamp">
+              ${formatThaiDateTime(alert.createdAt)}
             </div>
           </article>
         `;
