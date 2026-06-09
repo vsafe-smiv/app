@@ -1,11 +1,11 @@
-const CACHE_NAME = "v-safe-pwa-v16";
+const CACHE_NAME = "v-safe-pwa-v20";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./admin.html",
-  "./styles.css?v=13",
-  "./app.js?v=15",
-  "./admin.js?v=16",
+  "./styles.css?v=14",
+  "./app.js?v=20",
+  "./admin.js?v=17",
   "./manifest.webmanifest",
   "./VSAFE.png",
   "./VSAFE2.png",
@@ -51,3 +51,4 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(request).then((cached) => cached || caches.match("./index.html")))
   );
 });
+โ
