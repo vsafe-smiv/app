@@ -589,12 +589,6 @@ function parseLatLng(value = "") {
   return [lat, lng];
 }
 
-function parseLatLng(value = "") {
-  const [lat, lng] = String(value).split(",").map((item) => Number(item.trim()));
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  return [lat, lng];
-}
-
 function renderDashboardAlerts() {
   const container = document.querySelector("#dashboardAlertFeed");
   if (!container) return;
@@ -611,10 +605,15 @@ function renderDashboardAlerts() {
         const borderClass = isRed ? "alert-red" : "alert-yellow";
         const bgClass = isRed ? "bg-red-alert" : "bg-yellow-alert";
         
+        // สร้างวันที่แบบสั้น ควบคู่กับเวลา (เช่น 9 มิ.ย. | 14:30)
+        const dateObj = new Date(alert.createdAt);
+        const shortDate = new Intl.DateTimeFormat("th-TH-u-ca-buddhist", { day: "numeric", month: "short" }).format(dateObj);
+        const shortTime = dateObj.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false });
+        
         return `
           <article class="alert-item ${borderClass} ${bgClass}">
             <div class="time-dot-col">
-                <span class="alert-time">${new Date(alert.createdAt).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })}</span>
+                <span class="alert-time">${shortTime}</span>
                 <div class="status-dot"></div>
             </div>
             <div class="alert-info">
@@ -622,7 +621,8 @@ function renderDashboardAlerts() {
               <small>${alert.score} คะแนน | ${escapeHtml(alert.district || "-")} | ${escapeHtml(alert.status || "-")}</small>
             </div>
             <div class="alert-timestamp">
-              ${formatThaiDateTime(alert.createdAt).split(' ')[0]} </div>
+              ${shortDate}
+            </div>
           </article>
         `;
       }).join("")
