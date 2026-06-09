@@ -474,46 +474,110 @@ function drawLine(ctx, canvas, values, color, label) {
   ctx.fillText(label, canvas.width - 230 + legendIndex * 76, 22);
 }
 
+// ประกาศตัวแปร Global สำหรับเก็บ Instance ของแผนที่เพื่อไม่ให้โหลดซ้ำ
+let leafletMapInstance = null;
+let markerClusterGroup = null;
+
 function renderMap(rows) {
-  const map = document.querySelector("#riskMap");
-  if (!map) return;
-  const points = rows.map((row) => ({ ...row, coords: parseLatLng(row.latlng) })).filter((row) => row.coords);
-  const center = points.length
-    ? [points.reduce((sum, item) => sum + item.coords[0], 0) / points.length, points.reduce((sum, item) => sum + item.coords[1], 0) / points.length]
-    : [15.7047, 100.1372];
-  const zoom = 9;
-  const width = map.clientWidth || 640;
-  const height = map.clientHeight || 360;
-  const tileSize = 256;
-  const centerPixel = mercatorPixel(center[0], center[1], zoom);
-  const startX = centerPixel.x - width / 2;
-  const startY = centerPixel.y - height / 2;
-  const firstTileX = Math.floor(startX / tileSize);
-  const firstTileY = Math.floor(startY / tileSize);
-  const lastTileX = Math.floor((startX + width) / tileSize);
-  const lastTileY = Math.floor((startY + height) / tileSize);
-  let html = `<div class="osm-tiles">`;
-  for (let x = firstTileX; x <= lastTileX; x += 1) {
-    for (let y = firstTileY; y <= lastTileY; y += 1) {
-      const left = Math.round(x * tileSize - startX);
-      const top = Math.round(y * tileSize - startY);
-      html += `<img src="https://tile.openstreetmap.org/${zoom}/${x}/${y}.png" style="left:${left}px;top:${top}px" alt="" loading="lazy" />`;
+  const mapContainer = document.querySelector("#riskMap");
+  if (!mapContainer) return;
+
+  // 1. ตรวจสอบว่ามีการสร้างแผนที่ไว้หรือยัง ถ้ายังให้สร้างใหม่
+  if (!leafletMapInstance) {
+    // กำหนดจุดกึ่งกลางเริ่มต้น (นครสวรรค์)
+    leafletMapInstance = L.map('riskMap').setView([15.7047, 100.1372], 9);
+
+    // โหลดชั้นข้อมูลแผนที่ถนนจาก OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors',
+      maxZoom: 18
+    }).addTo(leafletMapInstance);
+
+    // สร้างระบบ Marker Cluster สำหรับจัดกลุ่มหมุดที่อยู่ใกล้กัน
+    markerClusterGroup = L.markerClusterGroup({
+      iconCreateFunction: function(cluster) {
+        return L.divIcon({
+          html: `<span>${cluster.getChildCount()}</span>`,
+          className: 'custom-cluster-icon',
+          iconSize: L.point(40, 40)
+        });
+      }
+    });
+    leafletMapInstance.addLayer(markerClusterGroup);
+
+    // ระบบขยายเต็มหน้าจอ (Fullscreen)
+    const fsBtn = document.getElementById('fullscreenMapBtn');
+    const mapCard = document.querySelector('.monitor-map-card');
+    if (fsBtn && mapCard) {
+      fsBtn.addEventListener('click', () => {
+        mapCard.classList.toggle('map-fullscreen-active');
+        // อัปเดตขนาดแผนที่ให้วาดใหม่หลังเปลี่ยนขนาดกล่อง
+        setTimeout(() => leafletMapInstance.invalidateSize(), 300);
+        
+        // สลับรูปไอคอนปุ่มขยาย/ย่อ
+        if (mapCard.classList.contains('map-fullscreen-active')) {
+          fsBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>`;
+        } else {
+          fsBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>`;
+        }
+      });
     }
   }
-  html += `</div>`;
-  html += points
-    .map((row) => {
-      const pixel = mercatorPixel(row.coords[0], row.coords[1], zoom);
-      const left = pixel.x - startX;
-      const top = pixel.y - startY;
-      return `<button class="real-map-pin ${zoneClass(row.zone)}" style="left:${left}px;top:${top}px" data-view-patient="${escapeHtml(row.patientCode)}" title="HN ${escapeHtml(row.hn)} ${escapeHtml(row.district)}"><span><b>${row.score}</b></span><small>${escapeHtml(row.district || "")}</small></button>`;
-    })
-    .join("");
-  html += `<a class="osm-credit" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap</a>`;
-  map.innerHTML = html;
-  map.querySelectorAll("[data-view-patient]").forEach((button) => {
-    button.addEventListener("click", () => showPatientDetail(button.dataset.viewPatient));
+
+  // 2. เคลียร์หมุดเก่าออกให้หมดก่อนวาดใหม่
+  markerClusterGroup.clearLayers();
+
+  // 3. แปลงข้อมูลพิกัด (ลอจิกเดิมของคุณ)
+  const points = rows.map((row) => ({ ...row, coords: parseLatLng(row.latlng) })).filter((row) => row.coords);
+
+  // 4. วนลูปปักหมุดผู้ป่วยทีละคน
+  points.forEach(row => {
+    let pinClass = 'pin-green';
+    let hexColor = '#10b981';
+    if (row.zone === 'RED') { pinClass = 'pin-red'; hexColor = '#ef4444'; }
+    else if (row.zone === 'YELLOW') { pinClass = 'pin-yellow'; hexColor = '#f59e0b'; }
+
+    // สร้างไอคอนหมุดแบบ HTML (รูปทรงหยดน้ำ)
+    const customIcon = L.divIcon({
+      html: `<div class="map-pin-inner ${pinClass}"><span>${row.score}</span></div>`,
+      className: 'custom-leaflet-icon',
+      iconSize: [36, 36],
+      iconAnchor: [18, 36], // จุดปักให้แหลมชี้ลงพื้น
+      popupAnchor: [0, -32] // จุดที่ Popup จะเด้งขึ้น
+    });
+
+    const marker = L.marker([row.coords[0], row.coords[1]], { icon: customIcon });
+
+    // สร้าง HTML สำหรับหน้าต่าง Popup เมื่อคลิกที่หมุด
+    const popupHTML = `
+      <div style="min-width: 220px;">
+        <div style="background: ${hexColor}; color: white; padding: 10px; font-weight: bold; display: flex; justify-content: space-between; align-items: center;">
+          <span>HN: ${escapeHtml(row.hn || "-")}</span>
+          <span style="background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; font-size: 0.8rem;">${row.zone}</span>
+        </div>
+        <div style="padding: 12px;">
+          <p style="margin: 0 0 6px 0; font-size: 0.9rem;"><strong>คะแนนความเสี่ยง:</strong> ${row.score} คะแนน</p>
+          <p style="margin: 0 0 12px 0; font-size: 0.9rem;"><strong>สถานะ:</strong> ${escapeHtml(row.status || "-")}</p>
+          
+          <a href="https://www.google.com/maps/dir/?api=1&destination=${row.coords[0]},${row.coords[1]}" 
+             target="_blank" 
+             style="display: block; width: 100%; text-align: center; background: #0f766e; color: white; padding: 8px 0; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 0.95rem;">
+             🗺️ นำทางไปยังพิกัด
+          </a>
+        </div>
+      </div>
+    `;
+
+    marker.bindPopup(popupHTML);
+    markerClusterGroup.addLayer(marker);
   });
+}
+
+// ฟังก์ชันแยก String "15.xxx, 100.yyy" ออกมาเป็น Array ตัวเลข
+function parseLatLng(value = "") {
+  const [lat, lng] = String(value).split(",").map((item) => Number(item.trim()));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return [lat, lng];
 }
 
 function parseLatLng(value = "") {
@@ -522,11 +586,6 @@ function parseLatLng(value = "") {
   return [lat, lng];
 }
 
-function mercatorPixel(lat, lng, zoom) {
-  const sin = Math.sin((lat * Math.PI) / 180);
-  const scale = 256 * 2 ** zoom;
-  return { x: ((lng + 180) / 360) * scale, y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale };
-}
 
 function renderDashboardAlerts() {
   const container = document.querySelector("#dashboardAlertFeed");
