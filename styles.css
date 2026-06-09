@@ -3853,3 +3853,46 @@ dialog::backdrop {
   cursor: not-allowed;
   box-shadow: none !important;
 }
+/* =========================================
+   สไตล์การจัด Layout หน้า Dashboard ใหม่
+   ========================================= */
+.dashboard-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.dashboard-main-grid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr; /* ให้กราฟกินพื้นที่กว้างกว่าแผนที่เล็กน้อย */
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.dashboard-bottom-grid {
+  display: flex;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+/* ปรับรูปแบบ Alert Feed ให้สวยงามขึ้น */
+#alertFeed .alert-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  border-left: 4px solid #cbd5e1;
+}
+#alertFeed .alert-item:has(.RED) { border-left-color: #ef4444; }
+#alertFeed .alert-item:has(.YELLOW) { border-left-color: #f59e0b; }
+
+/* Responsive สำหรับหน้าจอเล็ก (iPad/Mobile) */
+@media (max-width: 1024px) {
+  .dashboard-overview-grid { grid-template-columns: repeat(2, 1fr); }
+  .dashboard-main-grid { grid-template-columns: 1fr; } /* กราฟกับแผนที่เรียงต่อกันบนล่าง */
+  .dashboard-bottom-grid { flex-direction: column; } /* ตารางกับแจ้งเตือนเรียงต่อกันบนล่าง */
+}
