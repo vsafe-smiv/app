@@ -70,6 +70,39 @@ const AppDialog = {
   }
 };
 
+const AppLoading = {
+  count: 0,
+  init() {
+    if (document.getElementById("appLoadingOverlay")) return;
+    const html = `
+      <div id="appLoadingOverlay" class="app-loading-overlay" role="status" aria-live="polite" aria-hidden="true">
+        <div class="app-loading-box">
+          <div class="app-loading-spinner" aria-hidden="true"></div>
+          <p id="appLoadingMessage" class="app-loading-message">กำลังโหลดข้อมูล</p>
+          <p class="app-loading-subtext">กรุณารอสักครู่</p>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", html);
+  },
+  show(message = "กำลังโหลดข้อมูล") {
+    this.init();
+    this.count += 1;
+    const overlay = document.getElementById("appLoadingOverlay");
+    const messageEl = document.getElementById("appLoadingMessage");
+    if (messageEl) messageEl.textContent = message;
+    overlay?.classList.add("active");
+    overlay?.setAttribute("aria-hidden", "false");
+  },
+  hide() {
+    if (this.count > 0) this.count -= 1;
+    if (this.count > 0) return;
+    const overlay = document.getElementById("appLoadingOverlay");
+    overlay?.classList.remove("active");
+    overlay?.setAttribute("aria-hidden", "true");
+  }
+};
+
 const riskDomains = [
   {
     key: "psychotic",
@@ -155,6 +188,7 @@ const addressData = [
 let registerDraftPatients = [];
 let selectedPatientDetailCode = null;
 let userAppInitialized = false;
+let assessmentSubmitting = false;
 
 const knowledgeItems = [
   ["การสื่อสารเชิงบวก", "ใช้น้ำเสียงสงบ ประโยคสั้น รับฟังก่อนแนะนำ และหลีกเลี่ยงการตำหนิ"],
@@ -230,10 +264,19 @@ const storage = {
   },
   set(key, value) {
     localStorage.setItem(`vsafe:${key}`, JSON.stringify(value));
+  },
+  remove(key) {
+    localStorage.removeItem(`vsafe:${key}`);
   }
 };
 
-async function syncDataFromCloud() {
+function clearCloudDataCache() {
+  ["patients", "caregivers", "caseManagers", "assessments", "alerts", "addressData"].forEach((key) => storage.remove(key));
+}
+
+async function syncDataFromCloud(options = {}) {
+  const { silent = false, message = "กำลังโหลดข้อมูลจากฐานข้อมูลจริง" } = options;
+  if (!silent) AppLoading.show(message);
   try {
     const response = await fetch(`${VSAFE_GAS_URL}?action=getAllData`);
     const data = await response.json();
@@ -250,14 +293,19 @@ async function syncDataFromCloud() {
       console.log("ซิงค์ข้อมูลสำเร็จ!");
       return true;
     }
+    clearCloudDataCache();
     return false;
   } catch (error) {
     console.error("ซิงค์ข้อมูลล้มเหลว:", error);
+    clearCloudDataCache();
     return false;
+  } finally {
+    if (!silent) AppLoading.hide();
   }
 }
 
 async function apiPost(action, payload) {
+  AppLoading.show("กำลังบันทึกข้อมูลลงฐานข้อมูลจริง");
   try {
     const body = new URLSearchParams({ action, payload: JSON.stringify(payload) });
     const response = await fetch(VSAFE_GAS_URL, { method: "POST", body });
@@ -265,11 +313,13 @@ async function apiPost(action, payload) {
     if (!result.ok) {
       throw new Error(result.error || result.message || "Cloud save failed");
     }
-    await syncDataFromCloud();
+    await syncDataFromCloud({ silent: true });
     return result;
   } catch (error) {
     console.error("V-SAFE Cloud Save Failed:", error.message);
     return { ok: false, error: error.message };
+  } finally {
+    AppLoading.hide();
   }
 }
 
@@ -301,25 +351,10 @@ function getCaregivers() {
   return storage.get("caregivers", []);
 }
 
-function saveCaregivers(caregivers) {
-  storage.set("caregivers", caregivers);
-}
-
 function getCurrentCaregiver() {
   const id = storage.get("currentCaregiverId", null);
   if (!id) return null;
   return getCaregivers().find((caregiver) => caregiver.id === id) || null;
-}
-
-function updateCurrentCaregiver(updates) {
-  const current = getCurrentCaregiver();
-  if (!current) return null;
-  const caregivers = getCaregivers();
-  const index = caregivers.findIndex((caregiver) => caregiver.id === current.id);
-  if (index < 0) return null;
-  caregivers[index] = { ...caregivers[index], ...updates, updatedAt: thaiTimestamp() };
-  saveCaregivers(caregivers);
-  return caregivers[index];
 }
 
 function setCurrentCaregiver(caregiver) {
@@ -348,8 +383,20 @@ function getActivePatient() {
   return linked.find((patient) => patient.patientCode === caregiver.activePatientCode) || linked[0];
 }
 
-function setActivePatient(patientCode) {
-  updateCurrentCaregiver({ activePatientCode: patientCode });
+async function setActivePatient(patientCode) {
+  const caregiver = getCurrentCaregiver();
+  if (!caregiver) return;
+  if (caregiver.activePatientCode === patientCode) {
+    renderPatientPanels();
+    renderAssessmentPatientOptions();
+    renderHomeNextAssessment();
+    renderHelpContacts();
+    return;
+  }
+  const updated = { ...caregiver, activePatientCode: patientCode, updatedAt: thaiTimestamp() };
+  const saved = await saveToCloudOrAlert("saveCaregiver", updated, "ไม่สามารถบันทึกผู้ป่วยที่เลือกลงฐานข้อมูลจริงได้");
+  if (!saved) return;
+  storage.set("currentCaregiverId", updated.id);
   renderPatientPanels();
   renderAssessmentPatientOptions();
   renderHomeNextAssessment();
@@ -483,6 +530,10 @@ function findPatient(patientCode) {
 
 function normalizePatientCode(value = "") {
   return String(value).replace(/\s+/g, "").toUpperCase();
+}
+
+function normalizeCredential(value = "") {
+  return String(value ?? "").trim();
 }
 
 function upsertPatient(patient) {
@@ -683,7 +734,9 @@ function initAuthFlow() {
   document.querySelector("#loginFormUser")?.addEventListener("submit", (event) => {
     event.preventDefault();
     const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
-    const caregiver = getCaregivers().find((item) => item.username === payload.username && item.password === payload.password);
+    const username = normalizeCredential(payload.username);
+    const password = normalizeCredential(payload.password);
+    const caregiver = getCaregivers().find((item) => normalizeCredential(item.username) === username && normalizeCredential(item.password) === password);
     if (!caregiver) {
     AppDialog.alert("Username หรือ Password ไม่ถูกต้อง", "เข้าสู่ระบบล้มเหลว", "warning");
     return;
@@ -694,11 +747,13 @@ function initAuthFlow() {
   document.querySelector("#registerAccountForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
-    if (payload.password !== payload.confirmPassword) {
+    if (normalizeCredential(payload.password) !== normalizeCredential(payload.confirmPassword)) {
     AppDialog.alert("Password และยืนยัน Password ไม่ตรงกัน", "ข้อมูลไม่ถูกต้อง", "warning");
     return;
   }
-  if (getCaregivers().some((caregiver) => caregiver.username === payload.username)) {
+  const username = normalizeCredential(payload.username);
+  const password = normalizeCredential(payload.password);
+  if (getCaregivers().some((caregiver) => normalizeCredential(caregiver.username) === username)) {
     AppDialog.alert("Username นี้ถูกใช้แล้ว กรุณาเลือกชื่อผู้ใช้อื่น", "ชื่อผู้ใช้ซ้ำ", "warning");
     return;
   }
@@ -710,8 +765,8 @@ function initAuthFlow() {
 
     const caregiver = {
       id: `CG-${Date.now()}`,
-      username: payload.username,
-      password: payload.password,
+      username,
+      password,
       prefix: payload.prefix,
       fullName: payload.fullName,
       gender: payload.gender,
@@ -776,6 +831,7 @@ function setRegisterStep(step) {
     dot.classList.toggle("active", dotStep === nextStep);
     dot.classList.toggle("done", dotStep < nextStep);
   });
+  if (nextStep === 5) fillCaregiverServiceAreaFromPatient();
 }
 
 async function validateRegisterStep(step) {
@@ -791,11 +847,11 @@ async function validateRegisterStep(step) {
   }
   if (step === 2) {
     const payload = Object.fromEntries(new FormData(form).entries());
-    if (payload.password !== payload.confirmPassword) {
+    if (normalizeCredential(payload.password) !== normalizeCredential(payload.confirmPassword)) {
       AppDialog.alert("Password และยืนยัน Password ไม่ตรงกัน", "ข้อมูลไม่ถูกต้อง", "warning");
       return false;
     }
-    if (getCaregivers().some((caregiver) => caregiver.username === payload.username)) {
+    if (getCaregivers().some((caregiver) => normalizeCredential(caregiver.username) === normalizeCredential(payload.username))) {
       AppDialog.alert("Username นี้ถูกใช้แล้ว กรุณาเลือกชื่อผู้ใช้อื่น", "ข้อมูลไม่ถูกต้อง", "warning");
       return false;
     }
@@ -824,6 +880,7 @@ async function addDraftPatientFromInput() {
   }
   registerDraftPatients.push(reviewedPatient);
   renderDraftPatients();
+  fillCaregiverServiceAreaFromPatient();
   document.querySelector("#authPatientCodeLookup").value = "";
   document.querySelector("#authPatientEdit")?.classList.add("hidden");
   return patient;
@@ -849,8 +906,38 @@ function renderDraftPatients() {
     button.addEventListener("click", () => {
       registerDraftPatients = registerDraftPatients.filter((patient) => patient.patientCode !== button.dataset.removeDraftPatient);
       renderDraftPatients();
+      fillCaregiverServiceAreaFromPatient();
     });
   });
+}
+
+function fillCaregiverServiceAreaFromPatient() {
+  const form = document.querySelector("#registerAccountForm");
+  if (!form) return;
+  const patient = registerDraftPatients[0];
+  if (!patient) return;
+  setUserAddressValues(form, {
+    province: patient.province || "",
+    district: patient.district || "",
+    subdistrict: patient.subdistrict || "",
+    zipcode: patient.zipcode || ""
+  });
+  renderAuthCaseManagerPreview();
+}
+
+function renderAuthCaseManagerPreview() {
+  const preview = document.querySelector("#authCaseManagerPreview");
+  const form = document.querySelector("#registerAccountForm");
+  if (!preview || !form) return;
+  const district = form.elements.district?.value || "";
+  if (!district) {
+    preview.textContent = "ระบบจะแสดงข้อมูลโรงพยาบาลในพื้นที่ หลังเลือกอำเภอ";
+    return;
+  }
+  const cm = findCaseManager(district);
+  preview.innerHTML = cm
+    ? `<strong>ติดต่อโรงพยาบาลในพื้นที่:</strong><br>${escapeHtml(cm.workplace || "โรงพยาบาลประจำอำเภอ")}<br>${escapeHtml(`${cm.prefix || ""}${cm.fullName || ""}`)} | โทร ${escapeHtml(cm.phone || "-")}`
+    : "ยังไม่พบข้อมูลโรงพยาบาลในพื้นที่สำหรับอำเภอนี้";
 }
 
 function renderAuthenticatedApp() {
@@ -1133,16 +1220,23 @@ function initAssessmentForm() {
 
   document.querySelector("#assessmentForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
+    if (assessmentSubmitting) return;
+    assessmentSubmitting = true;
     const form = event.currentTarget;
+    const submitButton = form.querySelector('button[type="submit"]');
+    if (submitButton) submitButton.disabled = true;
+    try {
     const patientCode = new FormData(form).get("patientCode")?.toString().trim();
     
     // 1. ตรวจสอบข้อมูลผู้ป่วยและสิทธิ์
     const patient = storage.get("patients", []).find(p => p.patientCode === patientCode);
     if (!patient) {
-      return AppDialog.alert("ไม่พบรหัสผู้ป่วย กรุณาตรวจสอบการลงทะเบียน", "ข้อผิดพลาด", "warning");
+      await AppDialog.alert("ไม่พบรหัสผู้ป่วย กรุณาตรวจสอบการลงทะเบียน", "ข้อผิดพลาด", "warning");
+      return;
     }
     if (!getLinkedPatients().some((item) => item.patientCode === patientCode)) {
-      return AppDialog.alert("ผู้ป่วยรายนี้ไม่ได้อยู่ในบัญชีของคุณ", "ข้อผิดพลาด", "warning");
+      await AppDialog.alert("ผู้ป่วยรายนี้ไม่ได้อยู่ในบัญชีของคุณ", "ข้อผิดพลาด", "warning");
+      return;
     }
 
     // 2. คำนวณคะแนน (Raw Score + Baseline Score)
@@ -1166,21 +1260,18 @@ function initAssessmentForm() {
     const assessmentSaved = await saveToCloudOrAlert("saveAssessment", assessment, "ไม่สามารถบันทึกผลประเมินลงฐานข้อมูลจริงได้");
     if (!assessmentSaved) return;
 
-    // 5. แจ้งเตือน (เฉพาะ RED ZONE เท่านั้น)
-    if (zone === "RED") {
-      const alertRecord = { 
-        ...assessment, 
-        alertId: `ALT-${Date.now()}`, 
-        acknowledged: false 
-      };
-      const alertSaved = await saveToCloudOrAlert("saveAlert", alertRecord, "บันทึกผลประเมินแล้ว แต่ไม่สามารถบันทึกแจ้งเตือน RED ZONE ลงฐานข้อมูลจริงได้");
-      if (!alertSaved) return;
-    }
+    // 5. หากเป็น RED ZONE ฝั่ง Apps Script จะสร้าง Alert ในชีต Alerts ให้พร้อมกับ saveAssessment
 
     // 6. จบการทำงาน
-    setActivePatient(patientCode);
     showResultDialog(assessment);
+    renderPatientPanels();
+    renderAssessmentPatientOptions();
     renderHomeNextAssessment();
+    renderHistory();
+    } finally {
+      assessmentSubmitting = false;
+      if (submitButton) submitButton.disabled = false;
+    }
   });
 }
 
@@ -1512,7 +1603,7 @@ function initSosButtons() {
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./service-worker.js").catch(() => undefined);
+    navigator.serviceWorker.register("./service-worker.js?v=20").catch(() => undefined);
   }
 }
 
@@ -1529,7 +1620,7 @@ async function initUserApp() {
     // 2. สั่งซิงค์ข้อมูลจาก Cloud ก่อนเสมอ (สำคัญมาก: ห้ามข้ามขั้นตอนนี้)
     const synced = await syncDataFromCloud();
     if (!synced) {
-      console.warn("ไม่สามารถเชื่อมต่อฐานข้อมูลได้ แต่จะใช้ข้อมูลเก่าในเครื่อง");
+      console.warn("ไม่สามารถเชื่อมต่อฐานข้อมูลจริงได้ ระบบจะไม่ใช้ข้อมูลเก่าในเครื่อง");
     }
 
     // 3. เริ่มต้นระบบ UI และ Navigation
@@ -1544,12 +1635,12 @@ async function initUserApp() {
     // 5. โหลดส่วนประกอบของหน้าจอ
     initRegisterForm();
     renderAssessmentItems();
+    initAssessmentForm();
     renderKnowledge();
     initSosButtons();
     
-    // 6. แสดงผลหน้า Authenticated และปิดท้ายด้วย Service Worker
+    // 6. แสดงผลหน้า Authenticated
     renderAuthenticatedApp();
-    registerServiceWorker();
 
   } catch (error) {
     console.error("เกิดข้อผิดพลาดในการเริ่มต้นแอป:", error);
@@ -1557,6 +1648,7 @@ async function initUserApp() {
 }
 
 // ผูกฟังก์ชันเข้ากับหน้าเว็บ
+document.addEventListener("DOMContentLoaded", registerServiceWorker);
 document.addEventListener("DOMContentLoaded", initUserApp);
 
 // ==========================================
@@ -1667,7 +1759,10 @@ function setupUserAddressSelects(formScope = document) {
   };
 
   provinceSelect.addEventListener("change", refreshDistricts);
-  districtSelect?.addEventListener("change", refreshSubdistricts);
+  districtSelect?.addEventListener("change", () => {
+    refreshSubdistricts();
+    renderAuthCaseManagerPreview();
+  });
   
   subdistrictSelect?.addEventListener("change", () => {
     const match = addressList.find(item => 
@@ -1676,5 +1771,41 @@ function setupUserAddressSelects(formScope = document) {
       item.tambon === subdistrictSelect.value
     );
     if (zipcodeInput && match) zipcodeInput.value = match.zipcode || "";
+    renderAuthCaseManagerPreview();
   });
+}
+
+function setUserAddressValues(formScope = document, values = {}) {
+  const provinceSelect = formScope.querySelector('select[name="province"]');
+  const districtSelect = formScope.querySelector('select[name="district"]');
+  const subdistrictSelect = formScope.querySelector('select[name="subdistrict"]');
+  const zipcodeInput = formScope.querySelector('input[name="zipcode"]');
+  const addressList = storage.get("addressData", []);
+  if (!provinceSelect || !districtSelect || !subdistrictSelect || !addressList.length) return;
+
+  const provinces = [...new Set(addressList.map(item => item.province))].filter(Boolean).sort();
+  provinceSelect.innerHTML = '<option value="">-- เลือกจังหวัด --</option>' +
+    provinces.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join("");
+  provinceSelect.value = values.province || "";
+
+  const districts = addressList
+    .filter(item => item.province === provinceSelect.value)
+    .map(item => item.amphoe);
+  districtSelect.innerHTML = '<option value="">-- เลือกอำเภอ --</option>' +
+    [...new Set(districts)].filter(Boolean).sort().map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join("");
+  districtSelect.value = values.district || "";
+
+  const subdistricts = addressList
+    .filter(item => item.province === provinceSelect.value && item.amphoe === districtSelect.value)
+    .map(item => item.tambon);
+  subdistrictSelect.innerHTML = '<option value="">-- เลือกตำบล --</option>' +
+    [...new Set(subdistricts)].filter(Boolean).sort().map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+  subdistrictSelect.value = values.subdistrict || "";
+
+  const match = addressList.find(item =>
+    item.province === provinceSelect.value &&
+    item.amphoe === districtSelect.value &&
+    item.tambon === subdistrictSelect.value
+  );
+  if (zipcodeInput) zipcodeInput.value = values.zipcode || match?.zipcode || "";
 }
