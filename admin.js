@@ -338,7 +338,6 @@ function renderDashboard() {
   renderMap(rows);
   renderPriorityTable();
   renderAlertFeed();
-  renderDashboardExtras(rows);
   showUnacknowledgedSos();
 }
 
@@ -531,106 +530,6 @@ function mercatorPixel(lat, lng, zoom) {
     x: ((lng + 180) / 360) * scale,
     y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * scale
   };
-}
-
-function renderDashboardExtras(rows) {
-  renderDashboardAlerts();
-  renderDashboardContacts();
-  renderDashboardOps();
-  renderDashboardDonut(rows);
-  renderDashboardRescueLog();
-}
-
-function renderDashboardAlerts() {
-  const container = document.querySelector("#dashboardAlertFeed");
-  if (!container) return;
-  const alerts = storage.get("alerts", []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
-  container.innerHTML = alerts.length
-    ? alerts
-        .map((alert) => `
-          <article class="${zoneClass(alert.zone)}">
-            <time>${new Date(alert.createdAt).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })}</time>
-            <span>${alert.zone === "RED" ? "RED" : "YELLOW"}</span>
-            <strong>HN-${escapeHtml(alert.hn || "-")} | ${escapeHtml(alert.dx || "-")} | คะแนน ${escapeHtml(alert.score ?? "-")}</strong>
-            <small>${escapeHtml(alert.district || "-")} | ${escapeHtml(alert.status || "-")}</small>
-          </article>
-        `)
-        .join("")
-    : `<div class="monitor-empty">ยังไม่มีการแจ้งเตือน Yellow / Red Zone</div>`;
-}
-
-function renderDashboardContacts() {
-  const container = document.querySelector("#dashboardContacts");
-  if (!container) return;
-  const cm = findCaseManager(getCriticalPatient()?.district);
-  container.innerHTML = contactItems(cm)
-    .map((item) => `
-      <a class="${item.type}" href="tel:${item.phone}">
-        <img src="${item.image || "./icon%20app.png"}" alt="" />
-        <span>${escapeHtml(item.name)}</span>
-        <strong>${escapeHtml(item.phone)}</strong>
-      </a>
-    `)
-    .join("");
-}
-
-function renderDashboardOps() {
-  const container = document.querySelector("#dashboardOps");
-  if (!container) return;
-  const teams = [
-    ["โรงพยาบาลในพื้นที่", 4, 6],
-    ["SMI-V Team", 3, 5],
-    ["MCATT", 2, 3],
-    ["พยาบาล ER", 5, 8]
-  ];
-  container.innerHTML = teams
-    .map(([label, active, total]) => `
-      <article>
-        <span>${label}</span>
-        <strong><i></i>ว่าง ${active} / ทั้งหมด ${total} คน</strong>
-      </article>
-    `)
-    .join("");
-}
-
-function renderDashboardDonut(rows) {
-  const container = document.querySelector("#dashboardDonut");
-  if (!container) return;
-  const alerts = storage.get("alerts", []);
-  const waiting = alerts.filter((item) => item.status === "รอการติดต่อ").length || rows.filter((row) => row.zone === "RED").length;
-  const assigned = alerts.filter((item) => item.status === "รอการช่วยเหลือ").length || rows.filter((row) => row.zone === "YELLOW").length;
-  const complete = alerts.filter((item) => String(item.status || "").includes("ช่วยเหลือสำเร็จ")).length || rows.filter((row) => row.zone === "GREEN").length;
-  const total = Math.max(1, waiting + assigned + complete);
-  const waitingDeg = (waiting / total) * 360;
-  const assignedDeg = waitingDeg + (assigned / total) * 360;
-  container.innerHTML = `
-    <div class="donut" style="--waiting:${waitingDeg}deg;--assigned:${assignedDeg}deg">
-      <strong>${total}</strong>
-      <span>ภารกิจ</span>
-    </div>
-    <div class="donut-legend">
-      <span><i class="red"></i>รอการติดต่อ ${waiting} ราย</span>
-      <span><i class="yellow"></i>กำลังประสานงาน ${assigned} ราย</span>
-      <span><i class="green"></i>ติดตามต่อเนื่อง ${complete} ราย</span>
-    </div>
-  `;
-}
-
-function renderDashboardRescueLog() {
-  const container = document.querySelector("#dashboardRescueLog");
-  if (!container) return;
-  const alerts = storage.get("alerts", []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 3);
-  const fallback = patientCurrentRows().sort((a, b) => zoneWeight(b.zone) - zoneWeight(a.zone)).slice(0, 3);
-  const rows = alerts.length ? alerts : fallback.map((row) => ({ ...row, createdAt: row.updatedAt }));
-  container.innerHTML = rows
-    .map((row) => `
-      <article>
-        <time>${new Date(row.createdAt).toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit", hour12: false })}</time>
-        <strong>${row.zone === "GREEN" ? "ช่วยเหลือสำเร็จ" : row.zone === "YELLOW" ? "รับไว้เฝ้าระวัง" : "ส่งต่อทีมช่วยเหลือ"}</strong>
-        <span>HN-${escapeHtml(row.hn || "-")} | ${escapeHtml(row.dx || "-")} | ${escapeHtml(row.district || "-")}</span>
-      </article>
-    `)
-    .join("");
 }
 
 function getCriticalPatient() {
