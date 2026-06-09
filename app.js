@@ -1063,26 +1063,35 @@ function initAssessmentForm() {
   document.querySelector("#assessmentForm")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
-    const patientCode = new FormData(form).get("patientCode").trim();
-    const patient = findPatient(patientCode);
+    const patientCode = new FormData(form).get("patientCode")?.toString().trim();
+    
+    // 1. ตรวจสอบข้อมูลผู้ป่วยและสิทธิ์
+    const patient = storage.get("patients", []).find(p => p.patientCode === patientCode);
     if (!patient) {
-    AppDialog.alert("ไม่พบรหัสผู้ป่วย กรุณาตรวจสอบการลงทะเบียน", "ข้อผิดพลาด", "warning");
-    return;
-  }
+      return AppDialog.alert("ไม่พบรหัสผู้ป่วย กรุณาตรวจสอบการลงทะเบียน", "ข้อผิดพลาด", "warning");
+    }
     if (!getLinkedPatients().some((item) => item.patientCode === patientCode)) {
-    AppDialog.alert("ผู้ป่วยรายนี้ไม่ได้อยู่ในบัญชีของคุณ", "ข้อผิดพลาด", "warning");
-    return;
-  }
+      return AppDialog.alert("ผู้ป่วยรายนี้ไม่ได้อยู่ในบัญชีของคุณ", "ข้อผิดพลาด", "warning");
+    }
 
+    // 2. คำนวณคะแนน (Raw Score + Baseline Score)
     const answers = {};
-    const score = riskDomains.reduce((sum, item) => {
+    const rawScore = riskDomains.reduce((sum, item) => {
       const value = Number(form.querySelector(`input[name="${item.key}"]:checked`)?.value || 0);
       answers[item.key] = value;
       return sum + value;
     }, 0);
-    const zone = classifyRisk(score);
-    const assessment = makeAssessment(patient, score, zone, new Date().toISOString(), answers);
 
+    const baselineScore = Number(patient.baselineScore || 0);
+    const finalScore = rawScore + baselineScore; // รวมคะแนนฐานเดิม
+    const zone = classifyRisk(finalScore);
+    
+    console.log(`ประเมินสำเร็จ: Raw ${rawScore} + Baseline ${baselineScore} = Total ${finalScore} (${zone})`);
+
+    // 3. สร้างข้อมูลการประเมิน
+    const assessment = makeAssessment(patient, finalScore, zone, new Date().toISOString(), answers);
+
+    // 4. บันทึกข้อมูลลง Local Storage
     const assessments = storage.get("assessments", []);
     assessments.push(assessment);
     storage.set("assessments", assessments);
@@ -1090,16 +1099,30 @@ function initAssessmentForm() {
     const patients = storage.get("patients", []);
     const index = patients.findIndex((item) => item.patientCode === patientCode);
     if (index >= 0) {
-      patients[index] = { ...patients[index], lastScore: score, lastZone: zone, status: assessment.status, updatedAt: assessment.createdAt };
+      patients[index] = { 
+        ...patients[index], 
+        lastScore: finalScore, 
+        lastZone: zone, 
+        status: assessment.status, 
+        updatedAt: assessment.createdAt 
+      };
       storage.set("patients", patients);
     }
 
-    if (zone !== "GREEN") {
+    // 5. แจ้งเตือน SOS (เฉพาะ RED ZONE เท่านั้น)
+    if (zone === "RED") {
       const alerts = storage.get("alerts", []);
-      alerts.unshift({ ...assessment, alertId: `AL-${Date.now()}`, acknowledged: false });
+      alerts.unshift({ 
+        ...assessment, 
+        alertId: `ALT-${Date.now()}`, 
+        acknowledged: false 
+      });
       storage.set("alerts", alerts);
+      // ส่งข้อมูลเข้าเซิร์ฟเวอร์หลังบ้าน (ถ้าต้องการให้แอดมินเห็น)
+      await apiPost("saveAlert", assessment);
     }
 
+    // 6. จบการทำงาน
     await apiPost("saveAssessment", assessment);
     setActivePatient(patientCode);
     showResultDialog(assessment);
