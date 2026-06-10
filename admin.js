@@ -783,14 +783,16 @@ function parseLatLng(value = "") {
   return [lat, lng];
 }
 
+// 2. ฟังก์ชันเรนเดอร์แจ้งเตือนในหน้า Dashboard (บล็อกการแจ้งเตือนล่าสุด)
 function renderDashboardAlerts() {
-  const container = document.querySelector("#dashAlertList");
+  const container = document.querySelector("#dashAlertList") || document.querySelector(".dash-alert-list");
   if (!container) return;
+  
   const allAlerts = storage.get("alerts", []);
   
-  // โชว์แจ้งเตือนใหม่ที่ยังไม่รับทราบ (แดง/เหลือง) เรียงจากใหม่ไปเก่า (limit 4 รายการ)
+  // กรองเฉพาะแจ้งเตือนที่ยังไม่ได้รับทราบ และเรียงจากใหม่ไปเก่า
   const recentAlerts = allAlerts
-    .filter(a => !a.acknowledged)
+    .filter(a => isAlertActive(a))
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 4);
 
@@ -799,7 +801,6 @@ function renderDashboardAlerts() {
     return;
   }
 
-  // วาดบล็อกแจ้งเตือนและเพิ่มฟังก์ชันคลิก showPatientDetail
   container.innerHTML = recentAlerts.map(alert => {
     const isRed = alert.zone === "RED";
     const borderClass = isRed ? "alert-red" : "alert-yellow";
@@ -807,8 +808,8 @@ function renderDashboardAlerts() {
       <article class="alert-item ${borderClass}" style="cursor: pointer; transition: transform 0.2s;" onclick="showPatientDetail('${escapeHtml(alert.patientCode)}')">
         <div class="status-dot"></div>
         <div class="alert-info">
-          <strong>${alert.zone} ZONE | HN ${escapeHtml(alert.hn || "-")} | ${escapeHtml(alert.dx || "-")}</strong>
-          <small>${alert.score} คะแนน | อ.${escapeHtml(alert.district || "-")}</small>
+          <strong>${alert.zone || "RED"} ZONE | HN ${escapeHtml(alert.hn || "-")} | ${escapeHtml(alert.dx || "-")}</strong>
+          <small>${alert.score || 0} คะแนน | อ.${escapeHtml(alert.district || "-")}</small>
         </div>
         <div style="margin-left: auto; color: #64748b; display: flex; align-items: center;" title="คลิกเพื่อดูข้อมูลผู้ป่วย">
           <svg style="width: 1.25rem; height: 1.25rem;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
@@ -1126,12 +1127,15 @@ async function deletePatientRecord(patientCode) {
   AppDialog.alert("ลบข้อมูลผู้ป่วยเรียบร้อยแล้ว", "สำเร็จ", "success");
 }
 
+// 3. ฟังก์ชันเรนเดอร์แจ้งเตือนหน้ารายการใหญ่ (Alert Feed)
 function renderAlertFeed() {
   const container = document.querySelector("#alertFeed");
   if (!container) return;
   
   const allAlerts = storage.get("alerts", []);
-  const activeAlerts = allAlerts.filter(a => !a.acknowledged).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const activeAlerts = allAlerts
+    .filter(a => isAlertActive(a))
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   
   if (activeAlerts.length === 0) {
     container.innerHTML = `<div class="muted-box">ไม่มีการแจ้งเตือนใหม่ในขณะนี้</div>`;
@@ -1143,8 +1147,8 @@ function renderAlertFeed() {
     return `
       <div class="feed-item ${isRed ? "red" : "yellow"}">
         <div class="feed-content" style="cursor: pointer;" onclick="showPatientDetail('${escapeHtml(alert.patientCode)}')">
-          <strong>${alert.zone} ZONE: HN ${escapeHtml(alert.hn || "-")}</strong>
-          <p>อ.${escapeHtml(alert.district || "-")} | คะแนน ${alert.score}</p>
+          <strong>${alert.zone || "RED"} ZONE: HN ${escapeHtml(alert.hn || "-")}</strong>
+          <p>อ.${escapeHtml(alert.district || "-")} | คะแนน ${alert.score || 0}</p>
         </div>
         <div style="display: flex; gap: 0.5rem;">
           <button class="secondary-btn small" onclick="showPatientDetail('${escapeHtml(alert.patientCode)}')">ดูข้อมูล</button>
@@ -1222,15 +1226,40 @@ function startAlarm() {
 function stopAlarm() { if (alarmTimer) clearInterval(alarmTimer); alarmTimer = null; }
 // แก้ไขฟังก์ชันนี้ใน admin.js
 async function acknowledgeSos(alertId) {
-  if (!alertId) return;
+  // ดักจับ: เช็คว่าเป็น String เท่านั้น เพื่อป้องกันบั๊ก Event Object จากการกดปุ่มซ้ำซ้อน
+  if (!alertId || typeof alertId !== "string") return; 
 
-  const saved = await saveToCloudOrAlert("acknowledgeAlert", { alertId: alertId }, "ไม่สามารถบันทึกการรับทราบ SOS ลงฐานข้อมูลได้");
-  if (!saved) return;
+  // อัปเดต UI ให้หายไปทันที
+  const alerts = storage.get("alerts", []);
+  const updatedAlerts = alerts.map((alert) => 
+    (alert.alertId === alertId ? { ...alert, acknowledged: true, status: alert.status || "รับทราบภารกิจแล้ว" } : alert)
+  );
+  storage.set("alerts", updatedAlerts);
 
-  stopAlarm();
+  // ปิดเสียงและหน้าต่าง
+  if (typeof stopAlarm === "function") stopAlarm();
   document.querySelector("#sosDialog")?.close();
+  
+  // โหลดรายการแจ้งเตือนใหม่ (ให้รายการที่รับทราบแล้วหายไป)
   renderAlertFeed();
-  renderDashboardAlerts();
+  if (typeof renderDashboardAlerts === "function") renderDashboardAlerts();
+
+  // ส่งค่าไปอัปเดตที่ Google Sheets
+  try {
+    const res = await apiPost("acknowledgeAlert", { alertId: alertId });
+    if (!res.ok) {
+       console.warn("หมายเหตุ: บันทึกรับทราบในฐานข้อมูลล้มเหลว หรือ Alert นี้ถูกรับทราบไปแล้ว");
+    }
+  } catch (err) {
+    console.error("การเชื่อมต่อมีปัญหา");
+  }
+}
+// ฟังก์ชันช่วยเช็คสถานะการรับทราบ (รองรับข้อความ "FALSE" จาก Google Sheets)
+function isAlertActive(alert) {
+  if (!alert) return false;
+  if (alert.acknowledged === true) return false;
+  if (String(alert.acknowledged).toUpperCase() === "TRUE") return false;
+  return true;
 }
 // ฟังก์ชันสำหรับค้นหาผู้ดูแลที่เชื่อมโยงกับรหัสผู้ป่วยนั้นๆ
 function getCaregiversByPatient(patientCode) {
