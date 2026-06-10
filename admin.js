@@ -8,65 +8,185 @@ let selectedTrendYear = new Date().getFullYear();
 let currentPriorityPage = 1;
 const priorityItemsPerPage = 10;
 
+// =========================================================
+// LOADING OVERLAY HELPERS
+// =========================================================
+
+function showAdminLoading(message) {
+  const overlay = document.querySelector("#adminLoadingOverlay");
+  const status  = document.querySelector("#adminLoadingStatus");
+  if (overlay) overlay.style.display = "flex";
+  if (status && message) status.textContent = message;
+}
+
+function hideAdminLoading() {
+  const overlay = document.querySelector("#adminLoadingOverlay");
+  if (!overlay) return;
+  overlay.style.opacity = "0";
+  overlay.style.pointerEvents = "none";
+  setTimeout(() => { overlay.style.display = "none"; }, 450);
+}
+
+function setLoadingStatus(msg) {
+  const el = document.querySelector("#adminLoadingStatus");
+  if (el) el.textContent = msg;
+}
+
+// =========================================================
+// INIT ADMIN — crash-proof with timeout guard
+// =========================================================
 
 async function initAdmin() {
   if (!document.body.classList.contains("admin-body")) return;
-  
-  // จุดนี้จะทำการเรียกฟังก์ชันใน app.js เพื่อดึงทั้งข้อมูลผู้ป่วยและข้อมูลที่อยู่
-  await syncDataFromCloud(); 
 
-  initLogin();
-  initAdminNavigation();
-  
-  // ฟังก์ชันนี้ใน admin.js จะสามารถดึง storage.get("addressData") ไปใช้งานได้อย่างถูกต้อง
-  setupAddressSelects(document); 
-  initAdminForms();
-  initClock();
-  renderDashboard();
-  
-  // ระบบ Auto-Sync เบื้องหลังทุกๆ 30 วินาที จะอัปเดตข้อมูลที่อยู่ใหม่ๆ ตามไป
-  setInterval(async () => {
-    await syncDataFromCloud({ silent: true });
+  // Show loading overlay immediately
+  showAdminLoading("กำลังเชื่อมต่อฐานข้อมูล...");
+
+  // 20-second timeout safety net
+  const loadingTimeout = setTimeout(() => {
+    setLoadingStatus("โหลดนานเกินไป แสดง UI โดยไม่มีข้อมูลทั้งหมด");
+    hideAdminLoading();
+    initLogin();
+    initAdminNavigation();
+    initLogout();
+    initClock();
+  }, 20000);
+
+  try {
+    setLoadingStatus("ดึงข้อมูลจาก Google Sheets...");
+    await syncDataFromCloud();
+
+    clearTimeout(loadingTimeout);
+
+    setLoadingStatus("เตรียม UI สำเร็จแล้ว...");
+
+    initLogin();
+    initAdminNavigation();
+    initLogout();
+    setupAddressSelects(document);
+    initAdminForms();
+    initClock();
+
+    setLoadingStatus("โหลด Dashboard...");
     renderDashboard();
-  }, 30000);
+
+    // Auto-Sync เบื้องหลังทุก 30 วินาที
+    setInterval(async () => {
+      try {
+        await syncDataFromCloud({ silent: true });
+        renderDashboard();
+      } catch (e) {
+        console.warn("Auto-sync failed:", e.message);
+      }
+    }, 30000);
+
+    hideAdminLoading();
+
+  } catch (error) {
+    clearTimeout(loadingTimeout);
+    console.error("เกิดข้อผิดพลาดในการเริ่มต้นแอป:", error);
+
+    setLoadingStatus("ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง (แสดง UI ด้วยข้อมูลใน Cache)");
+
+    // ยัง init UI ได้แม้ไม่มีข้อมูลใหม่ — ใช้ cache จาก localStorage
+    try {
+      initLogin();
+      initAdminNavigation();
+      initLogout();
+      setupAddressSelects(document);
+      initAdminForms();
+      initClock();
+      renderDashboard();
+    } catch (uiError) {
+      console.error("UI init failed:", uiError.message);
+    }
+
+    setTimeout(() => hideAdminLoading(), 2000);
+  }
 }
 
 document.addEventListener("DOMContentLoaded", initAdmin);
 
+// =========================================================
+// LOGIN — crash-safe
+// =========================================================
+
 function initLogin() {
   const login = document.querySelector("#adminLogin");
-  const app = document.querySelector("#adminApp");
-  const form = document.querySelector("#loginForm");
+  const app   = document.querySelector("#adminApp");
+  const form  = document.querySelector("#loginForm");
+
+  if (!login || !app) return;
+
   const isLoggedIn = sessionStorage.getItem("vsafe:admin") === "1";
-  
   if (isLoggedIn) {
     login.classList.add("hidden");
     app.classList.remove("hidden");
   }
-  
+
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
     const data = new FormData(form);
-    
-    // แก้ไขเพิ่มความปลอดภัย: ดึงค่าได้ทั้งกรณีที่ HTML ตั้งชื่อว่า user หรือ username
     const username = normalizeCredential(data.get("user") || data.get("username"));
     const password = normalizeCredential(data.get("password"));
-    
+
     if (username === "14171" && password === "14171") {
       sessionStorage.setItem("vsafe:admin", "1");
       login.classList.add("hidden");
       app.classList.remove("hidden");
-      renderDashboard();
+      try { renderDashboard(); } catch(e) { console.warn("renderDashboard after login:", e); }
     } else {
-      // เปลี่ยนมาใช้กล่องข้อความเตือนสุดพรีเมียมตัวใหม่แทนการใช้ alert เดิมของบราวเซอร์
       if (typeof AppDialog !== "undefined") {
         AppDialog.alert("ชื่อผู้ใช้หรือรหัสผ่านระบบไม่ถูกต้อง", "เข้าสู่ระบบล้มเหลว", "warning");
       } else {
-        alert("User หรือรหัสผ่านไม่ถูกต้อง");
+        alert("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
       }
     }
   });
 }
+
+// =========================================================
+// LOGOUT
+// =========================================================
+
+function performLogout() {
+  // Clear all admin session data
+  sessionStorage.removeItem("vsafe:admin");
+  sessionStorage.clear();
+
+  // Clear admin-specific localStorage keys (keep patient cache for app)
+  ["vsafe:adminSidebarCollapsed"].forEach(k => localStorage.removeItem(k));
+
+  // Prevent back-button return to admin
+  history.pushState(null, "", location.href);
+  window.onpopstate = () => { history.pushState(null, "", location.href); };
+
+  // Redirect to login (reload page clears JS state)
+  location.reload();
+}
+
+function initLogout() {
+  const handler = async () => {
+    // Show confirmation dialog
+    let confirmed = false;
+    try {
+      confirmed = await AppDialog.confirm(
+        "คุณต้องการออกจากระบบใช่หรือไม่?",
+        "ยืนยันออกจากระบบ"
+      );
+    } catch(e) {
+      // Fallback if AppDialog not available
+      confirmed = window.confirm("คุณต้องการออกจากระบบใช่หรือไม่?");
+    }
+    if (confirmed) performLogout();
+  };
+
+  // Sidebar logout button
+  document.querySelector("#logoutBtn")?.addEventListener("click", handler);
+  // Topbar logout button
+  document.querySelector("#topbarLogoutBtn")?.addEventListener("click", handler);
+}
+
 
 function initAdminNavigation() {
   const app = document.querySelector("#adminApp");
@@ -87,6 +207,7 @@ function initAdminNavigation() {
       if (view === "caseManagers") renderCaseManagerTable();
       if (view === "patients") renderAdminPatientTable();
       if (view === "dashboard") renderDashboard();
+      if (view === "knowledge") renderKnowledgeAdmin();
     });
   });
 
@@ -174,14 +295,31 @@ function initAdminForms() {
     const editingKey = payload.editingKey;
     delete payload.editingKey;
     if (!payload.patientCode && payload.hn) payload.patientCode = `${payload.hn}SMIV`;
-    payload.latlng = calculateLatLngFromAddress(payload);
+    
+    // Normalize dates before submission
+    payload.dob = toIsoDateString(payload.dob);
+    payload.violenceHistoryDate = toIsoDateString(payload.violenceHistoryDate);
+    payload.dischargeDate = toIsoDateString(payload.dischargeDate);
+    
+    // รวมพิกัด lat, lng กลับเป็น latlng เพื่อเซฟลง Google Sheets
+    payload.latlng = `${payload.lat || ""},${payload.lng || ""}`;
+    delete payload.lat;
+    delete payload.lng;
+    
     payload.baselineScore = Number(payload.baselineScore || 0);
-    payload.status = statusByZone(classifyRisk(payload.baselineScore));
-    if (editingKey) {
+    
+    const existingPatient = editingKey ? storage.get("patients", []).find(p => p.patientCode === editingKey) : null;
+    if (existingPatient) {
+      payload.status = existingPatient.status || statusByZone(classifyRisk(payload.baselineScore));
+      payload.lastScore = existingPatient.lastScore !== undefined ? existingPatient.lastScore : "";
+      payload.lastZone = existingPatient.lastZone !== undefined ? existingPatient.lastZone : "";
+      payload.createdAt = existingPatient.createdAt;
       payload.updatedAt = thaiTimestamp();
     } else {
+      payload.status = statusByZone(classifyRisk(payload.baselineScore));
       payload.createdAt = thaiTimestamp();
     }
+
     const saved = await saveToCloudOrAlert("savePatient", payload, "ไม่สามารถบันทึกข้อมูลผู้ป่วยลงฐานข้อมูลได้");
     if (!saved) return;
     await AppDialog.alert("บันทึกข้อมูลผู้ป่วยเรียบร้อยแล้ว", "สำเร็จ", "success");
@@ -239,16 +377,33 @@ function showPatientForm(patient = null) {
   form.elements.editingKey.value = patient?.patientCode || "";
   
   if (patient) {
-    // โหลดฟิลด์ข้อมูลรวมถึง 4 ฟิลด์ที่อยู่ที่สร้างขึ้นมาใหม่ลงบนช่องฟอร์ม
+    // Populate address select dropdowns first
+    setupAddressSelects(form);
+    
+    // โหลดฟิลด์ข้อมูลลงในฟอร์ม
     ["patientCode","hn","prefix","fullName","gender","dob","violenceHistoryDate","substanceUse","substanceDetail","dx","dischargeDate","baselineScore","zipcode","houseNo","moo","villageName","road"].forEach((name) => {
-      if (form.elements[name]) form.elements[name].value = patient[name] || "";
+      let val = patient[name] || "";
+      if (["dob", "violenceHistoryDate", "dischargeDate"].indexOf(name) > -1) {
+        val = toIsoDateString(val); // Ensure YYYY-MM-DD CE for HTML5 inputs
+      }
+      if (form.elements[name]) form.elements[name].value = val;
     });
     setAddressFormValues(form, patient);
-    updatePatientLatLng(form);
+    
+    // โหลดค่า Latitude/Longitude จาก latlng ในฐานข้อมูล
+    const latlng = patient.latlng || "";
+    const [latVal, lngVal] = latlng.split(",").map(s => s.trim());
+    if (form.elements.lat) form.elements.lat.value = latVal || "";
+    if (form.elements.lng) form.elements.lng.value = lngVal || "";
   } else {
-    setupAddressSelects(scope = document);
-    updatePatientLatLng(form);
+    setupAddressSelects(form);
+    if (form.elements.lat) form.elements.lat.value = "";
+    if (form.elements.lng) form.elements.lng.value = "";
   }
+  
+  // Update and bind B.E. helper text displays
+  initDateInputHelpers(form);
+
   card.classList.remove("hidden");
   card.classList.add("form-reveal");
   card.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -304,26 +459,50 @@ function initPatientAddressAutomation() {
   });
   codeInput?.addEventListener("input", () => { codeInput.dataset.touched = "1"; });
 
-  // ตรวจจับการพิมพ์ใน 4 ช่องข้อมูลที่อยู่ใหม่ และดรอปดาวน์ทั้งหมด
-  const addressFields = ["houseNo", "moo", "villageName", "road"];
-  addressFields.forEach((name) => {
-    form.elements[name]?.addEventListener("input", () => updatePatientLatLng(form));
-  });
+  // ปุ่มคำนวณพิกัดภูมิศาสตร์จากข้อมูลที่อยู่
+  document.querySelector("#btnCalculateCoordinates")?.addEventListener("click", async () => {
+    const province = form.elements.province.value.trim();
+    const district = form.elements.district.value.trim();
+    const subdistrict = form.elements.subdistrict.value.trim();
+    const houseNo = form.elements.houseNo.value.trim();
 
-  // ปุ่มกดรับพิกัดปัจจุบันจาก GPS สดของอุปกรณ์ ณ ขณะนั้น (สำหรับงานลงพื้นที่)
-  document.querySelector("#btnGetActualGPS")?.addEventListener("click", () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          form.elements.latlng.value = `${position.coords.latitude.toFixed(5)},${position.coords.longitude.toFixed(5)}`;
-          AppDialog.alert("ดึงพิกัดจาก GPS เรียบร้อยแล้ว", "สำเร็จ", "success");
-        }, 
-        () => {
-          AppDialog.alert("ไม่สามารถดึง GPS ได้ กรุณาตรวจสอบสิทธิ์การเข้าถึงพิกัดบนอุปกรณ์", "ข้อผิดพลาด", "warning");
-        }
-      );
+    // 7. ตรวจสอบความครบถ้วนของข้อมูลที่อยู่
+    if (!province || !district || !subdistrict || !houseNo) {
+      if (typeof AppDialog !== "undefined") {
+        AppDialog.alert(
+          "กรุณากรอกข้อมูลที่อยู่ให้ครบถ้วนก่อนคำนวณพิกัด (ต้องการ: จังหวัด, อำเภอ, ตำบล, และบ้านเลขที่)",
+          "ข้อมูลไม่ครบถ้วน",
+          "warning"
+        );
+      } else {
+        alert("กรุณากรอกข้อมูลที่อยู่ให้ครบถ้วนก่อนคำนวณพิกัด (ต้องการ: จังหวัด, อำเภอ, ตำบล, และบ้านเลขที่)");
+      }
+      return;
+    }
+
+    if (typeof AppLoading !== "undefined") AppLoading.show("กำลังคำนวณพิกัดที่แม่นยำจากที่อยู่...");
+
+    const payload = Object.fromEntries(new FormData(form).entries());
+    const latlng = await asyncGetLatLngFromAddress(payload);
+
+    if (typeof AppLoading !== "undefined") AppLoading.hide();
+
+    if (latlng && latlng !== "-") {
+      const [latVal, lngVal] = latlng.split(",").map(s => s.trim());
+      if (form.elements.lat) form.elements.lat.value = latVal || "";
+      if (form.elements.lng) form.elements.lng.value = lngVal || "";
+      
+      if (typeof AppDialog !== "undefined") {
+        AppDialog.alert(`คำนวณพิกัดสำเร็จ:\nละติจูด (Latitude): ${latVal}\nลองจิจูด (Longitude): ${lngVal}`, "คำนวณพิกัดสำเร็จ", "success");
+      } else {
+        alert(`คำนวณพิกัดสำเร็จ:\nละติจูด (Latitude): ${latVal}\nลองจิจูด (Longitude): ${lngVal}`);
+      }
     } else {
-      AppDialog.alert("อุปกรณ์หรือเบราว์เซอร์นี้ไม่รองรับระบบ Geolocation", "ข้อผิดพลาด", "warning");
+      if (typeof AppDialog !== "undefined") {
+        AppDialog.alert("ไม่สามารถคำนวณพิกัดของที่อยู่นี้ได้ กรุณาตรวจสอบความถูกต้องของข้อมูล", "คำนวณพิกัดล้มเหลว", "warning");
+      } else {
+        alert("ไม่สามารถคำนวณพิกัดของที่อยู่นี้ได้ กรุณาตรวจสอบความถูกต้องของข้อมูล");
+      }
     }
   });
 }
@@ -401,7 +580,6 @@ function setupAddressSelects(scope = document) {
       if (zipcodeInput && filtered.length > 0) {
         zipcodeInput.value = filtered[0].zipcode || "";
       }
-      if (typeof updatePatientLatLng === "function") updatePatientLatLng(form);
     };
 
     // ผูกเหตุการณ์การเปลี่ยนแปลงค่าดรอปดาวน์ (Event Listeners)
@@ -422,52 +600,148 @@ function setupAddressSelects(scope = document) {
       if (zipcodeInput && match) {
         zipcodeInput.value = match.zipcode || "";
       }
-      if (typeof updatePatientLatLng === "function") updatePatientLatLng(form);
     });
   });
 }
 
 
-// =========================================================
-// ปรับปรุงฟังก์ชันคำนวณที่อยู่เต็ม และ ผูก Event ตรวจจับอัตโนมัติ
-// =========================================================
-function updatePatientLatLng(form) {
-  const latlngField = form.elements.latlng;
-  if (!latlngField) return;
 
-  const payload = Object.fromEntries(new FormData(form).entries());
-  
-  // ประกอบ Full Address String อัตโนมัติจากช่องข้อมูลใหม่ 4 ช่อง
-  const houseNo = payload.houseNo ? `บ้านเลขที่ ${payload.houseNo}` : "";
-  const moo = payload.moo ? `หมู่ที่ ${payload.moo}` : "";
-  const village = payload.villageName ? `หมู่บ้าน/ชุมชน ${payload.villageName}` : "";
-  const road = payload.road ? `ถนน/ซอย ${payload.road}` : "";
-  const subdistrict = payload.subdistrict ? `ต.${payload.subdistrict}` : "";
-  const district = payload.district ? `อ.${payload.district}` : "";
-  const province = payload.province ? `จ.${payload.province}` : "";
-
-  const fullAddress = [houseNo, moo, village, road, subdistrict, district, province].filter(Boolean).join(" ");
-  
-  // บันทึกที่อยู่เต็มลงใน Object ชั่วคราวเพื่อส่ง Geocoding หรือ บันทึกลงฐานข้อมูล
-  form.dataset.fullAddressString = fullAddress;
-
-  // ฟังก์ชันคำนวณจุดกึ่งกลางแบบ Fallback เดิม
-  latlngField.value = calculateLatLngFromAddress(payload);
-}
 
 function calculateLatLngFromAddress(payload) {
+  const provinceCenters = {
+    "กรุงเทพมหานคร": [13.7563, 100.5018],
+    "นครสวรรค์": [15.7047, 100.1372],
+    "อุทัยธานี": [15.3831, 100.0253],
+    "ชัยนาท": [15.1852, 100.1251],
+    "พิจิตร": [16.4428, 100.3489],
+    "กำแพงเพชร": [16.4828, 99.5228],
+    "ลพบุรี": [14.7995, 100.6534],
+    "พิษณุโลก": [16.8212, 100.2659],
+    "สุพรรณบุรี": [14.4745, 100.1176],
+    "เชียงใหม่": [18.7883, 98.9853],
+    "เชียงราย": [19.9071, 99.8325],
+    "นนทบุรี": [13.8591, 100.4927],
+    "ปทุมธานี": [14.0208, 100.5250],
+    "สมุทรปราการ": [13.5991, 100.5968],
+    "สมุทรสาคร": [13.5475, 100.2744],
+    "ขอนแก่น": [16.4322, 102.8236],
+    "นครราชสีมา": [14.9799, 102.0979],
+    "อุบลราชธานี": [15.2287, 104.8564],
+    "อุดรธานี": [17.4138, 102.7872],
+    "ชลบุรี": [13.3611, 100.9847],
+    "ระยอง": [12.6814, 101.2813],
+    "เพชรบุรี": [13.1118, 99.9444],
+    "ประจวบคีรีขันธ์": [11.8124, 99.7972],
+    "ภูเก็ต": [7.8804, 98.3922],
+    "สุราษฎร์ธานี": [9.1396, 99.3331],
+    "สงขลา": [7.1898, 100.5954],
+    "นครศรีธรรมราช": [8.4304, 99.9631],
+    "ยะลา": [6.5399, 101.2814],
+    "ตาก": [16.8839, 99.1258],
+    "แพร่": [18.1446, 100.1403],
+    "น่าน": [18.7830, 100.7816]
+  };
+
   const districtCoords = {
     "เมืองนครสวรรค์": [15.7047, 100.1372], "โกรกพระ": [15.5559, 100.0712], "ชุมแสง": [15.8918, 100.3079], "หนองบัว": [15.8645, 100.3238],
     "บรรพตพิสัย": [15.9362, 99.9815], "เก้าเลี้ยว": [15.8506, 100.0794], "ตาคลี": [15.2633, 100.3438], "ท่าตะโก": [15.6422, 100.4789],
     "ไพศาลี": [15.6008, 100.6551], "พยุหะคีรี": [15.4552, 100.1358], "ลาดยาว": [15.7511, 99.7897], "ตากฟ้า": [15.3499, 100.4956],
     "แม่วงก์": [15.7811, 99.5205], "แม่เปิน": [15.6578, 99.4687], "ชุมตาบง": [15.6333, 99.5534]
   };
-  const base = districtCoords[payload.district] || [15.7047, 100.1372];
-  const source = `${payload.addressLine || ""}${payload.subdistrict || ""}${payload.district || ""}`;
+
+  const cleanProv = String(payload.province || "").replace(/^(จังหวัด|จ\.)/, "").trim();
+  const cleanDist = String(payload.district || "").replace(/^(อำเภอ|อ\.)/, "").trim();
+
+  let base = districtCoords[cleanDist];
+  if (!base) {
+    base = provinceCenters[cleanProv] || [13.7563, 100.5018];
+  }
+
+  const source = `${payload.houseNo || ""}${payload.moo || ""}${payload.subdistrict || ""}${cleanDist}`;
   const hash = [...source].reduce((sum, char) => sum + char.charCodeAt(0), 0);
   const lat = base[0] + ((hash % 23) - 11) / 1000;
   const lng = base[1] + ((hash % 29) - 14) / 1000;
   return `${lat.toFixed(5)},${lng.toFixed(5)}`;
+}
+
+async function asyncGetLatLngFromAddress(payload) {
+  const subdistrict = (payload.subdistrict || "").trim();
+  const district = (payload.district || "").trim();
+  const province = (payload.province || "").trim();
+  const houseNo = (payload.houseNo || "").trim();
+  const moo = (payload.moo || "").trim();
+  const villageName = (payload.villageName || "").trim();
+  const road = (payload.road || "").trim();
+
+  const cleanSub = subdistrict.replace(/^(ตำบล|ต\.)/, "").trim();
+  const cleanDist = district.replace(/^(อำเภอ|อ\.)/, "").trim();
+  const cleanProv = province.replace(/^(จังหวัด|จ\.)/, "").trim();
+
+  const queries = [];
+
+  // Stage 1: Full address (with HouseNo, Moo, Village Name, Road, Subdistrict, District, Province)
+  let q1Parts = [];
+  if (houseNo) q1Parts.push(`บ้านเลขที่ ${houseNo}`);
+  if (moo) q1Parts.push(`หมู่ที่ ${moo}`);
+  if (villageName) q1Parts.push(villageName);
+  if (road) q1Parts.push(road);
+  if (cleanSub) q1Parts.push(`ตำบล${cleanSub}`);
+  if (cleanDist) q1Parts.push(`อำเภอ${cleanDist}`);
+  if (cleanProv) q1Parts.push(`จังหวัด${cleanProv}`);
+  q1Parts.push("ประเทศไทย");
+  queries.push(q1Parts.join(" "));
+
+  // Stage 2: Village name, Subdistrict, District, Province
+  if (villageName) {
+    let q2Parts = [villageName];
+    if (cleanSub) q2Parts.push(`ตำบล${cleanSub}`);
+    if (cleanDist) q2Parts.push(`อำเภอ${cleanDist}`);
+    if (cleanProv) q2Parts.push(`จังหวัด${cleanProv}`);
+    q2Parts.push("ประเทศไทย");
+    queries.push(q2Parts.join(" "));
+  }
+
+  // Stage 3: Subdistrict, District, Province
+  if (cleanSub && cleanDist && cleanProv) {
+    queries.push(`ตำบล${cleanSub} อำเภอ${cleanDist} จังหวัด${cleanProv} ประเทศไทย`);
+  }
+
+  // Stage 4: District, Province
+  if (cleanDist && cleanProv) {
+    queries.push(`อำเภอ${cleanDist} จังหวัด${cleanProv} ประเทศไทย`);
+  }
+
+  // Stage 5: Province
+  if (cleanProv) {
+    queries.push(`จังหวัด${cleanProv} ประเทศไทย`);
+  }
+
+  for (let i = 0; i < queries.length; i++) {
+    const q = queries[i];
+    try {
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+      
+      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1`, {
+        headers: {
+          'Accept-Language': 'th,en',
+          'User-Agent': 'VSAFE-App/1.0 (psychiatric-monitoring-system)'
+        }
+      });
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lon = parseFloat(data[0].lon);
+        console.log(`Geocoding succeeded at stage ${i + 1} with query: "${q}" -> [${lat}, ${lon}]`);
+        return `${lat.toFixed(5)},${lon.toFixed(5)}`;
+      }
+    } catch (e) {
+      console.error(`Geocoding failed at stage ${i + 1} for query: "${q}"`, e);
+    }
+  }
+
+  return calculateLatLngFromAddress(payload);
 }
 
 function statusByZone(zone) {
@@ -503,6 +777,12 @@ function renderDashboard() {
   renderPriorityTable();
   renderDashboardAlerts();
   showUnacknowledgedSos();
+  
+  // อัปเดตรายการแจ้งเตือนเมื่ออยู่ในหน้าจอแจ้งเตือน
+  const activeViewBtn = document.querySelector(".side-nav [data-admin-view].active");
+  if (activeViewBtn && activeViewBtn.dataset.adminView === "alerts") {
+    renderAlertFeed();
+  }
 }
 
 function renderOverview(rows) {
@@ -665,6 +945,7 @@ function drawLine(ctx, canvas, values, color, label) {
 // ประกาศตัวแปร Global สำหรับเก็บ Instance ของแผนที่เพื่อไม่ให้โหลดซ้ำ
 let leafletMapInstance = null;
 let markerClusterGroup = null;
+let mapMarkersByHN = {};
 
 function renderMap(rows) {
   const mapContainer = document.querySelector("#riskMap");
@@ -732,13 +1013,132 @@ function renderMap(rows) {
         setTimeout(() => leafletMapInstance.invalidateSize(), 300);
       });
     }
+
+    // --- เพิ่มระบบค้นหาผู้ป่วยและพื้นที่บนแผนที่ ---
+    const searchPatientInput = document.getElementById("mapSearchPatientInput");
+    const searchPatientBtn = document.getElementById("mapSearchPatientBtn");
+    const searchAreaInput = document.getElementById("mapSearchAreaInput");
+    const searchAreaBtn = document.getElementById("mapSearchAreaBtn");
+    
+    const performPatientSearch = () => {
+      const query = searchPatientInput.value.trim().toLowerCase();
+      if (!query) return;
+
+      const cleanHn = query.replace(/\s+/g, "").toUpperCase();
+      const targetMarker = mapMarkersByHN[cleanHn] || mapMarkersByHN[cleanHn + "SMIV"];
+      
+      if (targetMarker) {
+        leafletMapInstance.flyTo(targetMarker.getLatLng(), 16, { animate: true, duration: 1.5 });
+        setTimeout(() => {
+          markerClusterGroup.zoomToShowLayer(targetMarker, () => {
+            targetMarker.openPopup();
+          });
+        }, 1200);
+        return;
+      }
+
+      // ค้นหาแบบ HN บางส่วน
+      const matchingHnKey = Object.keys(mapMarkersByHN).find(key => key.includes(cleanHn));
+      if (matchingHnKey) {
+        const matchedMarker = mapMarkersByHN[matchingHnKey];
+        leafletMapInstance.flyTo(matchedMarker.getLatLng(), 16, { animate: true, duration: 1.5 });
+        setTimeout(() => {
+          markerClusterGroup.zoomToShowLayer(matchedMarker, () => {
+            matchedMarker.openPopup();
+          });
+        }, 1200);
+        return;
+      }
+
+      if (typeof AppDialog !== "undefined") {
+        AppDialog.alert("ไม่พบข้อมูลผู้ป่วยที่มี HN หรือ รหัสผู้ป่วยนี้บนแผนที่", "ไม่พบผลลัพธ์", "info");
+      } else {
+        alert("ไม่พบข้อมูลผู้ป่วยที่มี HN หรือ รหัสผู้ป่วยนี้บนแผนที่");
+      }
+    };
+
+    const performAreaSearch = async () => {
+      const query = searchAreaInput.value.trim();
+      if (!query) return;
+
+      let searchQ = query;
+      if (!searchQ.toLowerCase().includes("thailand") && !searchQ.includes("ประเทศไทย")) {
+        searchQ += " ประเทศไทย";
+      }
+
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQ)}&limit=1`, {
+          headers: {
+            'Accept-Language': 'th,en'
+          }
+        });
+        const data = await response.json();
+        if (data && data.length > 0) {
+          const lat = parseFloat(data[0].lat);
+          const lon = parseFloat(data[0].lon);
+          
+          let zoomLevel = 12; // default for district
+          const queryLower = query.toLowerCase();
+          if (queryLower.includes("จังหวัด") || queryLower.includes("จ.") || queryLower.includes("province") || 
+              (data[0].class === "boundary" && data[0].type === "administrative" && data[0].importance > 0.6)) {
+            zoomLevel = 9;
+          }
+
+          leafletMapInstance.flyTo([lat, lon], zoomLevel, { animate: true, duration: 1.5 });
+        } else {
+          throw new Error("No results found on Nominatim");
+        }
+      } catch (error) {
+        console.error("Geocoding area search error, using local coordinates:", error);
+        const districtCoords = {
+          "เมืองนครสวรรค์": [15.7047, 100.1372], "โกรกพระ": [15.5559, 100.0712], "ชุมแสง": [15.8918, 100.3079], "หนองบัว": [15.8645, 100.3238],
+          "บรรพตพิสัย": [15.9362, 99.9815], "เก้าเลี้ยว": [15.8506, 100.0794], "ตาคลี": [15.2633, 100.3438], "ท่าตะโก": [15.6422, 100.4789],
+          "ไพศาลี": [15.6008, 100.6551], "พยุหะคีรี": [15.4552, 100.1358], "ลาดยาว": [15.7511, 99.7897], "ตากฟ้า": [15.3499, 100.4956],
+          "แม่วงก์": [15.7811, 99.5205], "แม่เปิน": [15.6578, 99.4687], "ชุมตาบง": [15.6333, 99.5534]
+        };
+        let normQuery = query.replace(/^(อำเภอ|อ\.|จังหวัด|จ\.)/, "").trim();
+        const matchedDistrict = Object.keys(districtCoords).find(d => d.includes(normQuery) || normQuery.includes(d));
+        if (matchedDistrict) {
+          leafletMapInstance.flyTo(districtCoords[matchedDistrict], 12, { animate: true, duration: 1.5 });
+        } else if (normQuery.includes("นครสวรรค์")) {
+          leafletMapInstance.flyTo([15.7047, 100.1372], 9, { animate: true, duration: 1.5 });
+        } else {
+          if (typeof AppDialog !== "undefined") {
+            AppDialog.alert("ไม่พบพิกัดของพื้นที่นี้ กรุณาตรวจสอบคำค้นหา", "ไม่พบผลลัพธ์", "info");
+          } else {
+            alert("ไม่พบพิกัดของพื้นที่นี้");
+          }
+        }
+      }
+    };
+
+    searchPatientBtn?.addEventListener("click", performPatientSearch);
+    searchPatientInput?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        performPatientSearch();
+      }
+    });
+
+    searchAreaBtn?.addEventListener("click", performAreaSearch);
+    searchAreaInput?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        performAreaSearch();
+      }
+    });
   }
 
   // 2. เคลียร์หมุดเก่า
   markerClusterGroup.clearLayers();
+  mapMarkersByHN = {};
 
   // 3. วาดหมุดผู้ป่วย
-  const points = rows.map((row) => ({ ...row, coords: parseLatLng(row.latlng) })).filter((row) => row.coords);
+  const points = rows.map((row) => {
+    let latlng = row.latlng;
+    if (!latlng || latlng === "-" || String(latlng).trim() === "") {
+      latlng = calculateLatLngFromAddress(row);
+    }
+    return { ...row, coords: parseLatLng(latlng) };
+  }).filter((row) => row.coords);
   points.forEach(row => {
     let pinClass = 'pin-green';
     let hexColor = '#10b981';
@@ -773,6 +1173,14 @@ function renderMap(rows) {
     `;
     marker.bindPopup(popupHTML);
     markerClusterGroup.addLayer(marker);
+
+    // บันทึกการอ้างอิงหมุดด้วย HN และ Patient Code เพื่อใช้ในการค้นหา
+    if (row.hn) {
+      mapMarkersByHN[normalizePatientCode(row.hn)] = marker;
+    }
+    if (row.patientCode) {
+      mapMarkersByHN[normalizePatientCode(row.patientCode)] = marker;
+    }
   });
 }
 
@@ -785,7 +1193,7 @@ function parseLatLng(value = "") {
 
 // 2. ฟังก์ชันเรนเดอร์แจ้งเตือนในหน้า Dashboard (บล็อกการแจ้งเตือนล่าสุด)
 function renderDashboardAlerts() {
-  const container = document.querySelector("#dashAlertList") || document.querySelector(".dash-alert-list");
+  const container = document.querySelector("#dashboardAlertFeed") || document.querySelector("#dashAlertList") || document.querySelector(".dash-alert-list");
   if (!container) return;
   
   const allAlerts = storage.get("alerts", []);
@@ -949,9 +1357,9 @@ function showPatientDetail(patientCode) {
     <div class="detail-grid-admin">
       ${detailItem("รหัสผู้ป่วย", row.patientCode)}
       ${detailItem("เพศ", row.gender || "-")}
-      ${detailItem("วันเกิด / อายุ", `${row.dob || "-"} / ${calculateAge(row.dob) || "-"} ปี`)}
-      ${detailItem("วันที่จำหน่าย", row.dischargeDate ? formatThaiDateTime(row.dischargeDate) : "-")}
-      ${detailItem("ประวัติความรุนแรง", row.violenceHistoryDate || "-")}
+      ${detailItem("วันเกิด / อายุ", `${row.dob ? formatThaiDateTime(row.dob, true) : "-"} / ${calculateAge(row.dob) || "-"} ปี`)}
+      ${detailItem("วันที่จำหน่าย", row.dischargeDate ? formatThaiDateTime(row.dischargeDate, true) : "-")}
+      ${detailItem("ประวัติความรุนแรง", row.violenceHistoryDate ? formatThaiDateTime(row.violenceHistoryDate, true) : "-")}
       ${detailItem("สารเสพติด", row.substanceUse === "ใช้" ? `ใช้: ${row.substanceDetail || "-"}` : "ไม่ใช้")}
       ${detailItem("ที่อยู่", fullAddressDisplay)}
       ${detailItem("พิกัดแผนที่", row.latlng || "-")}
@@ -972,7 +1380,8 @@ function detailItem(label, value) {
 
 function calculateAge(dob) {
   if (!dob) return null;
-  const birthDate = new Date(dob);
+  const ceDob = toIsoDateString(dob);
+  const birthDate = new Date(ceDob);
   const today = new Date();
   let age = today.getFullYear() - birthDate.getFullYear();
   const m = today.getMonth() - birthDate.getMonth();
@@ -980,9 +1389,128 @@ function calculateAge(dob) {
   return age;
 }
 
-function formatThaiDateTime(dateString) {
-  if (!dateString) return "-";
-  return new Date(dateString).toLocaleDateString("th-TH", { year: 'numeric', month: 'long', day: 'numeric' });
+function toIsoDateString(value) {
+  if (!value) return "";
+  let str = String(value).trim();
+  
+  // Check if it has T (ISO timestamp) and extract date part
+  const tIndex = str.indexOf("T");
+  if (tIndex > -1) str = str.substring(0, tIndex);
+
+  let match = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (match) {
+    let year = parseInt(match[1], 10);
+    let month = String(parseInt(match[2], 10)).padStart(2, '0');
+    let day = String(parseInt(match[3], 10)).padStart(2, '0');
+    if (year > 2400) year -= 543;
+    return `${year}-${month}-${day}`;
+  }
+  
+  match = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (match) {
+    let day = String(parseInt(match[1], 10)).padStart(2, '0');
+    let month = String(parseInt(match[2], 10)).padStart(2, '0');
+    let year = parseInt(match[3], 10);
+    if (year > 2400) year -= 543;
+    return `${year}-${month}-${day}`;
+  }
+  
+  const date = new Date(str);
+  if (isNaN(date.getTime())) return str;
+  
+  let year = date.getFullYear();
+  if (year > 2400) year -= 543;
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatThaiDateTime(value, dateOnly = false) {
+  if (!value) return "-";
+  
+  let normalizedValue = value;
+  if (typeof value === "string") {
+    const match = value.match(/^(\d{4})/);
+    if (match) {
+      let y = parseInt(match[1], 10);
+      if (y > 2400) {
+        normalizedValue = (y - 543) + value.slice(4);
+      }
+    }
+  }
+  
+  const date = new Date(normalizedValue);
+  if (Number.isNaN(date.getTime())) return "-";
+  
+  const isDateOnly = dateOnly || (typeof value === "string" && value.length <= 10 && !value.includes("T"));
+  
+  if (isDateOnly) {
+    if (typeof normalizedValue === "string") {
+      const parts = normalizedValue.split("T")[0].split(/[-/]/);
+      if (parts.length === 3) {
+        let y = parseInt(parts[0], 10);
+        let m = parseInt(parts[1], 10) - 1;
+        let d = parseInt(parts[2], 10);
+        const localDate = new Date(y, m, d);
+        return new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
+          year: "numeric",
+          month: "long",
+          day: "numeric"
+        }).format(localDate);
+      }
+    }
+    return new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    }).format(date);
+  } else {
+    let displayDate = date;
+    if (date.getFullYear() > 2400) {
+      displayDate = new Date(date);
+      displayDate.setFullYear(date.getFullYear() - 543);
+    }
+    return new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(displayDate);
+  }
+}
+
+function initDateInputHelpers(container = document) {
+  const dateInputs = container.querySelectorAll('input[type="date"]');
+  dateInputs.forEach(input => {
+    let helper = input.parentNode.querySelector('.be-date-helper');
+    if (!helper) {
+      helper = document.createElement('div');
+      helper.className = 'be-date-helper';
+      helper.style.fontSize = '0.82rem';
+      helper.style.color = '#0f766e';
+      helper.style.marginTop = '0.25rem';
+      helper.style.fontWeight = '500';
+      input.parentNode.appendChild(helper);
+    }
+
+    const updateHelper = () => {
+      const val = input.value;
+      if (val) {
+        const formatted = formatThaiDateTime(val, true);
+        helper.textContent = `แสดงผล พ.ศ.: ${formatted}`;
+      } else {
+        helper.textContent = 'แสดงผล พ.ศ.: ยังไม่ได้เลือกวันที่';
+      }
+    };
+
+    updateHelper();
+
+    input.removeEventListener('input', updateHelper);
+    input.addEventListener('input', updateHelper);
+    input.removeEventListener('change', updateHelper);
+    input.addEventListener('change', updateHelper);
+  });
 }
 
 function getCaregiversByPatient(patientCode) {
@@ -1127,32 +1655,42 @@ async function deletePatientRecord(patientCode) {
   AppDialog.alert("ลบข้อมูลผู้ป่วยเรียบร้อยแล้ว", "สำเร็จ", "success");
 }
 
-// 3. ฟังก์ชันเรนเดอร์แจ้งเตือนหน้ารายการใหญ่ (Alert Feed)
 function renderAlertFeed() {
   const container = document.querySelector("#alertFeed");
   if (!container) return;
   
   const allAlerts = storage.get("alerts", []);
-  const activeAlerts = allAlerts
-    .filter(a => isAlertActive(a))
+  const sortedAlerts = allAlerts
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   
-  if (activeAlerts.length === 0) {
-    container.innerHTML = `<div class="muted-box">ไม่มีการแจ้งเตือนใหม่ในขณะนี้</div>`;
+  if (sortedAlerts.length === 0) {
+    container.innerHTML = `<div class="muted-box">ไม่มีประวัติการแจ้งเตือนในขณะนี้</div>`;
     return;
   }
 
-  container.innerHTML = activeAlerts.map(alert => {
-    const isRed = alert.zone === "RED";
+  container.innerHTML = sortedAlerts.map(alert => {
+    const zoneClass = alert.zone || "RED";
+    const isActive = isAlertActive(alert);
+    const ackButton = isActive
+      ? `<button class="action-btn primary-btn" onclick="acknowledgeSos('${alert.alertId}')">รับทราบ</button>`
+      : `<span class="status-badge acknowledged">✓ รับทราบแล้ว</span>`;
+
     return `
-      <div class="feed-item ${isRed ? "red" : "yellow"}">
-        <div class="feed-content" style="cursor: pointer;" onclick="showPatientDetail('${escapeHtml(alert.patientCode)}')">
-          <strong>${alert.zone || "RED"} ZONE: HN ${escapeHtml(alert.hn || "-")}</strong>
-          <p>อ.${escapeHtml(alert.district || "-")} | คะแนน ${alert.score || 0}</p>
+      <div class="alert-item-card ${zoneClass.toLowerCase()} ${isActive ? 'active' : 'acknowledged'}">
+        <div class="alert-card-main" onclick="showPatientDetail('${escapeHtml(alert.patientCode)}')">
+          <div class="alert-card-header">
+            <span class="risk-badge ${zoneClass.toLowerCase()}">${zoneClass} ZONE</span>
+            <span class="hn-label">HN: <strong>${escapeHtml(alert.hn || "-")}</strong></span>
+            <span class="score-badge">คะแนน: <strong>${alert.score || 0}</strong></span>
+          </div>
+          <div class="alert-card-body">
+            <span class="area-label">📍 อ.${escapeHtml(alert.district || "-")}</span>
+            <span class="date-label">📅 ${formatThaiDateTime(alert.createdAt)}</span>
+          </div>
         </div>
-        <div style="display: flex; gap: 0.5rem;">
-          <button class="secondary-btn small" onclick="showPatientDetail('${escapeHtml(alert.patientCode)}')">ดูข้อมูล</button>
-          <button class="primary-btn small" onclick="acknowledgeSos('${alert.alertId}')">รับทราบ</button>
+        <div class="alert-card-actions">
+          <button class="action-btn view-btn" onclick="showPatientDetail('${escapeHtml(alert.patientCode)}')">ดูข้อมูล</button>
+          ${ackButton}
         </div>
       </div>
     `;
@@ -1305,3 +1843,496 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// =========================================================
+// KNOWLEDGE MANAGEMENT ADMIN MODULE
+// =========================================================
+
+let kmActiveCat = "ALL";
+let kmActiveZone = "ALL";
+let kmFormInitialized = false; // Guard: attach listeners only once
+
+/** 9 default categories — used as fallback if DB returns nothing */
+const KM_DEFAULT_CATEGORIES = [
+  { categoryId: "CAT-01", name: "รู้โรค",       order: 1 },
+  { categoryId: "CAT-02", name: "อารมณ์ดี",     order: 2 },
+  { categoryId: "CAT-03", name: "คุยกัน",       order: 3 },
+  { categoryId: "CAT-04", name: "กิจวัตร",      order: 4 },
+  { categoryId: "CAT-05", name: "ปลอดยา",       order: 5 },
+  { categoryId: "CAT-06", name: "ใจสบาย",       order: 6 },
+  { categoryId: "CAT-07", name: "ตกลงกัน",      order: 7 },
+  { categoryId: "CAT-08", name: "ปลอดภัย",      order: 8 },
+  { categoryId: "CAT-09", name: "อยู่ร่วมกัน",  order: 9 }
+];
+
+/** Return sorted categories — always falls back to the 9 defaults */
+function getKmCategories() {
+  let cats = storage.get("knowledgeCategories", []);
+  if (!Array.isArray(cats) || cats.length === 0) {
+    // Seed the defaults into local storage so next call is instant
+    storage.set("knowledgeCategories", KM_DEFAULT_CATEGORIES);
+    cats = KM_DEFAULT_CATEGORIES;
+  }
+  return [...cats].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+}
+
+function renderKnowledgeAdmin() {
+  buildKmCategoryTabs();
+  buildKmZoneFilter();
+  renderKmContentGrid();
+  initKnowledgeForm(); // safe — guarded against duplicate listeners
+}
+
+/** สร้าง Tab หมวดหมู่ */
+function buildKmCategoryTabs() {
+  const tabBar = document.querySelector("#kmCategoryTabs");
+  if (!tabBar) return;
+
+  const sorted = getKmCategories();
+
+  tabBar.innerHTML = `<button class="km-tab ${kmActiveCat === "ALL" ? "active" : ""}" data-km-cat="ALL">ทั้งหมด</button>` +
+    sorted.map(c => `<button class="km-tab ${kmActiveCat === c.categoryId ? "active" : ""}" data-km-cat="${c.categoryId}">${escapeHtml(c.name)}</button>`).join("");
+
+  tabBar.querySelectorAll(".km-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      kmActiveCat = btn.dataset.kmCat;
+      tabBar.querySelectorAll(".km-tab").forEach(t => t.classList.toggle("active", t === btn));
+      renderKmContentGrid();
+    });
+  });
+}
+
+/**
+ * Populate (or re-populate) the category <select> inside the knowledge form.
+ * Called every time the form opens — ensures fresh options after async sync.
+ * If no categories exist in storage, seeds the 9 defaults first.
+ */
+function populateKmCategoryDropdown(selectedId) {
+  const catSelect = document.querySelector("#knowledgeForm select[name='categoryId']");
+  if (!catSelect) return;
+
+  const sorted = getKmCategories();
+
+  if (sorted.length === 0) {
+    catSelect.innerHTML = `<option value="">ไม่สามารถโหลดหมวดหมู่ได้ กรุณาลองใหม่อีกครั้ง</option>`;
+    return;
+  }
+
+  catSelect.innerHTML = `<option value="">-- เลือกหมวดหมู่ --</option>` +
+    sorted.map(c => `<option value="${c.categoryId}" ${c.categoryId === selectedId ? "selected" : ""}>${escapeHtml(c.name)}</option>`).join("");
+}
+
+/** Zone filter button interactions */
+function buildKmZoneFilter() {
+  document.querySelectorAll(".km-zone-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      kmActiveZone = btn.dataset.kmZone;
+      document.querySelectorAll(".km-zone-btn").forEach(b => b.classList.toggle("active", b === btn));
+      renderKmContentGrid();
+    });
+  });
+}
+
+/** Get category name by ID */
+function getKmCategoryName(categoryId) {
+  const cats = storage.get("knowledgeCategories", []);
+  const cat = cats.find(c => c.categoryId === categoryId);
+  return cat ? cat.name : categoryId;
+}
+
+/** Render content grid with filters */
+function renderKmContentGrid() {
+  const grid = document.querySelector("#knowledgeContentGrid");
+  if (!grid) return;
+
+  let contents = storage.get("knowledgeContent", []);
+
+  // Filter by category
+  if (kmActiveCat !== "ALL") {
+    contents = contents.filter(c => c.categoryId === kmActiveCat);
+  }
+
+  // Filter by zone
+  if (kmActiveZone !== "ALL") {
+    contents = contents.filter(c => {
+      const z = (c.zoneTarget || "ALL");
+      return z === "ALL" || z === kmActiveZone || z.split(",").map(v => v.trim()).includes(kmActiveZone);
+    });
+  }
+
+  // Sort by order then createdAt
+  contents.sort((a, b) => Number(a.order || 99) - Number(b.order || 99));
+
+  if (contents.length === 0) {
+    grid.innerHTML = `<div class="km-empty-state">📚 ยังไม่มีเนื้อหาในหมวดนี้ กด "เพิ่มเนื้อหาใหม่" เพื่อเริ่มต้น</div>`;
+    return;
+  }
+
+  grid.innerHTML = contents.map(c => renderKmCard(c)).join("");
+
+  // Bind edit/delete buttons
+  grid.querySelectorAll("[data-km-edit]").forEach(btn => {
+    btn.addEventListener("click", () => openKnowledgeEditForm(btn.dataset.kmEdit));
+  });
+  grid.querySelectorAll("[data-km-delete]").forEach(btn => {
+    btn.addEventListener("click", () => deleteKnowledgeContent(btn.dataset.kmDelete));
+  });
+}
+
+/** Build HTML for a single knowledge card */
+function renderKmCard(c) {
+  const catName = getKmCategoryName(c.categoryId);
+  const zoneLabel = { GREEN: "🟢 Green", YELLOW: "🟡 Yellow", RED: "🔴 Red", ALL: "🌐 ทุกโซน", "YELLOW,RED": "🟡🔴 Yellow+Red" };
+  const zone = c.zoneTarget || "ALL";
+  const accentClass = zone.includes(",") ? "YELLOW,RED" : zone;
+  const statusBadge = c.status === "draft"
+    ? `<span class="km-status-badge draft">ฉบับร่าง</span>`
+    : `<span class="km-status-badge published">เผยแพร่</span>`;
+
+  // Thumbnail
+  let thumb = `<div class="km-card-thumb">📄</div>`;
+  if (c.contentType === "image" && c.imageUrl) {
+    thumb = `<div class="km-card-thumb"><img src="${escapeHtml(c.imageUrl)}" alt="${escapeHtml(c.title)}" loading="lazy" /></div>`;
+  } else if ((c.contentType === "video_file" || c.contentType === "video_link") && c.videoUrl) {
+    const ytEmbed = getYoutubeEmbedUrl(c.videoUrl);
+    if (ytEmbed) {
+      thumb = `<div class="km-card-thumb"><iframe src="${ytEmbed}" loading="lazy" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+    } else {
+      thumb = `<div class="km-card-thumb">🎬</div>`;
+    }
+  }
+
+  return `
+    <article class="km-card">
+      <div class="km-card-accent ${accentClass}"></div>
+      ${thumb}
+      <div class="km-card-body">
+        <span class="km-card-category">${escapeHtml(catName)}</span>
+        <p class="km-card-title">${escapeHtml(c.title || "-")}</p>
+        <p class="km-card-desc">${escapeHtml(c.description || "")}</p>
+        <span class="km-zone-badge ${accentClass === "YELLOW,RED" ? "YELLOW" : accentClass}">${zoneLabel[zone] || zone}</span>
+        ${statusBadge}
+      </div>
+      <div class="km-card-footer">
+        <button class="km-btn-edit" data-km-edit="${escapeHtml(c.contentId)}">✏️ แก้ไข</button>
+        <button class="km-btn-delete" data-km-delete="${escapeHtml(c.contentId)}">🗑️ ลบ</button>
+      </div>
+    </article>`;
+}
+
+/** Convert YouTube URL to embed URL */
+function getYoutubeEmbedUrl(url) {
+  if (!url) return null;
+  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  return null;
+}
+
+/** Init knowledge form events — guarded so listeners are attached only ONCE */
+function initKnowledgeForm() {
+  if (kmFormInitialized) return; // prevent duplicate listeners on repeated nav clicks
+  kmFormInitialized = true;
+
+  // Open form button
+  document.querySelector("#openKnowledgeForm")?.addEventListener("click", () => {
+    openKnowledgeAddForm();
+  });
+
+  // Cancel button
+  document.querySelector("#cancelKnowledgeForm")?.addEventListener("click", () => {
+    document.querySelector("#knowledgeFormCard")?.classList.add("hidden");
+  });
+
+  // Content type switcher
+  document.querySelector("#kmContentType")?.addEventListener("change", (e) => {
+    switchKmMediaSection(e.target.value);
+  });
+
+  // Image file upload
+  document.querySelector("#kmImageUpload")?.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    await handleKmFileUpload(file, "image");
+  });
+
+  // Video file upload
+  document.querySelector("#kmVideoUpload")?.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    await handleKmFileUpload(file, "video");
+  });
+
+  // Form submit
+  document.querySelector("#knowledgeForm")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    await submitKnowledgeForm(e.currentTarget);
+  });
+}
+
+/** Show/hide media sections based on content type */
+function switchKmMediaSection(type) {
+  const sections = {
+    image: "#kmImageSection",
+    video_file: "#kmVideoFileSection",
+    video_link: "#kmVideoLinkSection",
+    text: "#kmTextSection"
+  };
+  Object.entries(sections).forEach(([key, selector]) => {
+    document.querySelector(selector)?.classList.toggle("hidden", key !== type);
+  });
+}
+
+/** Open form for adding new content */
+function openKnowledgeAddForm() {
+  const form = document.querySelector("#knowledgeForm");
+  const card = document.querySelector("#knowledgeFormCard");
+  const heading = document.querySelector("#knowledgeFormHeading");
+  if (!form || !card) return;
+
+  form.reset();
+  form.querySelector("[name='contentId']").value = "";
+  if (heading) heading.textContent = "เพิ่มเนื้อหาใหม่";
+
+  // Always re-populate the category dropdown fresh (handles async sync timing)
+  populateKmCategoryDropdown("");
+
+  switchKmMediaSection("text");
+  card.classList.remove("hidden");
+  card.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/** Open form pre-filled for editing */
+function openKnowledgeEditForm(contentId) {
+  const contents = storage.get("knowledgeContent", []);
+  const item = contents.find(c => c.contentId === contentId);
+  if (!item) return;
+
+  const form = document.querySelector("#knowledgeForm");
+  const card = document.querySelector("#knowledgeFormCard");
+  const heading = document.querySelector("#knowledgeFormHeading");
+  if (!form || !card) return;
+
+  // Re-populate category dropdown first (with pre-selection)
+  populateKmCategoryDropdown(item.categoryId || "");
+
+  form.reset();
+  form.querySelector("[name='contentId']").value = item.contentId || "";
+  // After form.reset() clears the select, re-apply the category selection
+  populateKmCategoryDropdown(item.categoryId || "");
+
+  form.querySelector("[name='status']").value = item.status || "published";
+  form.querySelector("[name='title']").value = item.title || "";
+  form.querySelector("[name='description']").value = item.description || "";
+  form.querySelector("[name='contentType']").value = item.contentType || "text";
+  form.querySelector("[name='zoneTarget']").value = item.zoneTarget || "ALL";
+  form.querySelector("[name='order']").value = item.order || 1;
+  form.querySelector("[name='richTextContent']").value = item.richTextContent || "";
+
+  // Set URL fields
+  const imgUrlEl = form.querySelector("#kmImageUrl");
+  if (imgUrlEl) imgUrlEl.value = item.imageUrl || "";
+  const vidUrlEl = form.querySelector("#kmVideoUrl");
+  if (vidUrlEl) vidUrlEl.value = item.videoUrl || "";
+  const vidLinkEl = form.querySelector("#kmVideoLinkUrl");
+  if (vidLinkEl) vidLinkEl.value = item.videoUrl || "";
+
+  if (heading) heading.textContent = "แก้ไขเนื้อหา";
+  switchKmMediaSection(item.contentType || "text");
+  card.classList.remove("hidden");
+  card.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/** Handle file upload to Google Drive via backend */
+async function handleKmFileUpload(file, type) {
+  const previewId  = type === "image" ? "#kmImagePreview"  : "#kmVideoPreview";
+  const urlInputId = type === "image" ? "#kmImageUrl"      : "#kmVideoUrl";
+  const statusId   = type === "image" ? "#kmImageStatus"   : "#kmVideoStatus";
+
+  const previewEl = document.querySelector(previewId);
+  const urlInput  = document.querySelector(urlInputId);
+  let   statusEl  = document.querySelector(statusId);
+
+  // --- Client-side validation ---
+  const ALLOWED_TYPES = [
+    "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
+    "video/mp4",  "video/webm", "video/ogg",
+    "application/pdf"
+  ];
+  const MAX_SIZE_MB = 50;
+  const MAX_BYTES   = MAX_SIZE_MB * 1024 * 1024;
+
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    AppDialog.alert(
+      "ประเภทไฟล์ไม่รองรับ กรุณาใช้ไฟล์:\n• รูปภาพ: JPG, PNG, WEBP, GIF\n• วิดีโอ: MP4, WEBM\n• เอกสาร: PDF",
+      "ไฟล์ไม่รองรับ", "warning"
+    );
+    return;
+  }
+  if (file.size > MAX_BYTES) {
+    AppDialog.alert(
+      `ไฟล์มีขนาดใหญ่เกินไป (${(file.size / 1024 / 1024).toFixed(1)} MB)\nกรุณาใช้ไฟล์ขนาดไม่เกิน ${MAX_SIZE_MB} MB`,
+      "ไฟล์ใหญ่เกินไป", "warning"
+    );
+    return;
+  }
+
+  // --- Inject a status element under the file input if not exist ---
+  if (!statusEl) {
+    const input = document.querySelector(type === "image" ? "#kmImageUpload" : "#kmVideoUpload");
+    statusEl = document.createElement("div");
+    statusEl.id = statusId.replace("#", "");
+    statusEl.style.cssText = "margin-top:0.5rem;font-size:0.82rem;display:flex;align-items:center;gap:0.5rem;";
+    input?.parentElement?.insertAdjacentElement("afterend", statusEl);
+  }
+
+  // Show uploading state
+  statusEl.innerHTML = `
+    <span style="display:inline-block;width:1rem;height:1rem;border:2px solid #0f766e;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0;"></span>
+    <span style="color:#0f766e;font-weight:600;">กำลังอัปโหลด ${escapeHtml(file.name)} (${(file.size/1024/1024).toFixed(1)} MB)...</span>`;
+
+  // Add spin keyframes once
+  if (!document.getElementById("km-spin-style")) {
+    const s = document.createElement("style");
+    s.id = "km-spin-style";
+    s.textContent = "@keyframes spin{to{transform:rotate(360deg)}}";
+    document.head.appendChild(s);
+  }
+
+  try {
+    const base64 = await fileToBase64(file);
+    const res = await apiPost("uploadMedia", {
+      base64Data: base64,
+      filename:   file.name,
+      mimeType:   file.type
+    });
+
+    if (res.ok && res.url) {
+      // Fill URL field
+      if (urlInput) urlInput.value = res.url;
+
+      // Show preview
+      if (previewEl) {
+        previewEl.classList.remove("hidden");
+        previewEl.innerHTML = type === "image"
+          ? `<img src="${res.url}" alt="Preview" style="width:100%;max-height:200px;object-fit:contain;" />`
+          : `<video src="${res.url}" controls style="width:100%;max-height:200px;"></video>`;
+      }
+
+      // Success status
+      statusEl.innerHTML = `
+        <span style="color:#16a34a;font-size:1rem;">✅</span>
+        <span style="color:#16a34a;font-weight:600;">อัปโหลดสำเร็จ! (${escapeHtml(res.filename || file.name)})</span>`;
+
+    } else if (res.authRequired) {
+      // Special: Drive auth error
+      statusEl.innerHTML = `<span style="color:#b91c1c;font-weight:600;">⛔ ระบบไม่มีสิทธิ์เข้าถึง Google Drive</span>`;
+      AppDialog.alert(
+        "ระบบไม่มีสิทธิ์เข้าถึง Google Drive\n\nวิธีแก้ไข:\n1. เปิด Google Apps Script Editor\n2. กด Deploy → New Deployment\n3. ยืนยันสิทธิ์ Google Drive ใหม่\n4. คัดลอก URL ใหม่ไปอัปเดตในระบบ",
+        "จำเป็นต้องอนุญาตสิทธิ์ใหม่", "error"
+      );
+    } else {
+      const errMsg = res.error || "ข้อผิดพลาดไม่ทราบสาเหตุ";
+      statusEl.innerHTML = `
+        <span style="color:#b91c1c;font-weight:600;">❌ อัปโหลดล้มเหลว</span>
+        <button onclick="document.querySelector('${type === \"image\" ? \"#kmImageUpload\" : \"#kmVideoUpload\"}').click()"
+          style="margin-left:0.5rem;padding:0.2rem 0.6rem;background:#fee2e2;color:#b91c1c;border:none;border-radius:0.4rem;cursor:pointer;font-family:'Prompt',sans-serif;font-size:0.78rem;font-weight:600;">
+          🔄 ลองใหม่
+        </button>`;
+      AppDialog.alert("ไม่สามารถอัปโหลดไฟล์ได้:\n" + errMsg, "อัปโหลดล้มเหลว", "error");
+    }
+
+  } catch (err) {
+    statusEl.innerHTML = `<span style="color:#b91c1c;font-weight:600;">❌ เกิดข้อผิดพลาด: ${escapeHtml(err.message || "ไม่ทราบสาเหตุ")}</span>`;
+    AppDialog.alert("เกิดข้อผิดพลาดในการอ่านหรืออัปโหลดไฟล์\n" + (err.message || ""), "ผิดพลาด", "error");
+  }
+}
+
+/** Convert File to base64 string */
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      // Strip data URL prefix (e.g. "data:image/png;base64,")
+      const base64 = result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+/** Submit knowledge form (save or update) */
+async function submitKnowledgeForm(form) {
+  const data = Object.fromEntries(new FormData(form).entries());
+  const contentType = data.contentType || "text";
+
+  // Resolve the correct URL fields based on content type
+  const imageUrlEl = document.querySelector("#kmImageUrl");
+  const videoUrlEl = document.querySelector("#kmVideoUrl");
+  const videoLinkEl = document.querySelector("#kmVideoLinkUrl");
+
+  if (contentType === "image") {
+    data.imageUrl = imageUrlEl?.value || "";
+    data.videoUrl = "";
+  } else if (contentType === "video_file") {
+    data.videoUrl = videoUrlEl?.value || "";
+    data.imageUrl = "";
+  } else if (contentType === "video_link") {
+    data.videoUrl = videoLinkEl?.value || "";
+    data.imageUrl = "";
+  } else {
+    data.imageUrl = "";
+    data.videoUrl = "";
+  }
+
+  if (!data.title) {
+    AppDialog.alert("กรุณากรอกชื่อเรื่อง / หัวข้อ", "ไม่ครบถ้วน", "warning");
+    return;
+  }
+  if (!data.categoryId) {
+    AppDialog.alert("กรุณาเลือกหมวดหมู่", "ไม่ครบถ้วน", "warning");
+    return;
+  }
+
+  data.order = Number(data.order || 1);
+  data.createdAt = data.contentId ? undefined : thaiTimestamp();
+  data.updatedAt = thaiTimestamp();
+
+  const saved = await saveToCloudOrAlert("saveKnowledgeContent", data, "ไม่สามารถบันทึกเนื้อหาได้");
+  if (!saved) return;
+
+  // Update local storage
+  const contents = storage.get("knowledgeContent", []);
+  const idx = contents.findIndex(c => c.contentId === data.contentId);
+  if (idx > -1) {
+    contents[idx] = { ...contents[idx], ...data };
+  } else {
+    contents.push(data);
+  }
+  storage.set("knowledgeContent", contents);
+
+  AppDialog.alert("บันทึกเนื้อหาเรียบร้อยแล้ว", "สำเร็จ", "success");
+  document.querySelector("#knowledgeFormCard")?.classList.add("hidden");
+  form.reset();
+  renderKmContentGrid();
+}
+
+/** Delete a knowledge content item */
+async function deleteKnowledgeContent(contentId) {
+  const confirmed = await AppDialog.confirm("ต้องการลบเนื้อหานี้หรือไม่? การลบไม่สามารถยกเลิกได้", "ยืนยันการลบ");
+  if (!confirmed) return;
+
+  const res = await apiPost("deleteKnowledgeContent", { contentId });
+  if (!res.ok) {
+    AppDialog.alert("ลบเนื้อหาล้มเหลว: " + (res.error || res.message), "ผิดพลาด", "error");
+    return;
+  }
+
+  // Update local storage
+  const contents = storage.get("knowledgeContent", []);
+  storage.set("knowledgeContent", contents.filter(c => c.contentId !== contentId));
+
+  AppDialog.alert("ลบเนื้อหาเรียบร้อยแล้ว", "สำเร็จ", "success");
+  renderKmContentGrid();
+}
