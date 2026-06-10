@@ -12,7 +12,7 @@
     <link rel="shortcut icon" type="image/png" href="./icon%20app.png" />
     <link rel="apple-touch-icon" href="./icon%20app.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
-    <link rel="stylesheet" href="./styles.css?v=14" />
+    <link rel="stylesheet" href="./styles.css?v=16" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
@@ -31,7 +31,30 @@
       <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v5M14 11v5" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
       <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></symbol>
+      <symbol id="i-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
     </svg>
+
+    <!-- Loading Overlay (shown during initial data sync) -->
+    <div id="adminLoadingOverlay" style="
+      position:fixed;inset:0;z-index:9999;
+      background:linear-gradient(135deg,#061f35 0%,#0f3460 100%);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:1.5rem;transition:opacity 0.4s ease;
+    ">
+      <img src="./icon%20app.png" alt="V-SAFE" style="width:80px;height:80px;border-radius:1rem;box-shadow:0 8px 32px rgba(0,0,0,0.4);" />
+      <div style="text-align:center;">
+        <p style="color:#7dd3fc;font-family:'Prompt',sans-serif;font-size:0.9rem;font-weight:500;margin:0 0 0.5rem;">V-SAFE Admin System</p>
+        <h2 style="color:white;font-family:'Prompt',sans-serif;font-size:1.3rem;font-weight:700;margin:0 0 1.5rem;">กำลังโหลดข้อมูล...</h2>
+      </div>
+      <div style="display:flex;gap:0.4rem;">
+        <span style="width:10px;height:10px;border-radius:50%;background:#38bdf8;animation:dot-pulse 1.2s 0s infinite;"></span>
+        <span style="width:10px;height:10px;border-radius:50%;background:#38bdf8;animation:dot-pulse 1.2s 0.2s infinite;"></span>
+        <span style="width:10px;height:10px;border-radius:50%;background:#38bdf8;animation:dot-pulse 1.2s 0.4s infinite;"></span>
+      </div>
+      <p id="adminLoadingStatus" style="color:#94a3b8;font-family:'Prompt',sans-serif;font-size:0.82rem;margin:0;">กำลังเชื่อมต่อฐานข้อมูล...</p>
+      <style>@keyframes dot-pulse{0%,80%,100%{transform:scale(0.7);opacity:0.5}40%{transform:scale(1);opacity:1}}</style>
+    </div>
     <section id="adminLogin" class="login-screen">
       <form id="loginForm" class="login-card">
         <img src="./icon%20app.png" alt="V-SAFE" />
@@ -67,8 +90,23 @@
           <button data-admin-view="caseManagers"><svg><use href="#i-hospital"></use></svg><span>โรงพยาบาลพื้นที่</span></button>
           <button data-admin-view="patients"><svg><use href="#i-users"></use></svg><span>ผู้ป่วย</span></button>
           <button data-admin-view="alerts"><svg><use href="#i-bell"></use></svg><span>แจ้งเตือน</span></button>
+          <button data-admin-view="knowledge"><svg><use href="#i-book"></use></svg><span>จัดการคลังความรู้</span></button>
         </nav>
-        <a class="ghost-link" href="./index.html">เปิดแอปผู้ดูแล</a>
+        <!-- Sidebar Footer: user info + logout -->
+        <div class="sidebar-footer">
+          <div class="sidebar-user-info">
+            <div class="sidebar-avatar">A</div>
+            <div>
+              <p class="sidebar-username">Administrator</p>
+              <p class="sidebar-role">V-SAFE Admin</p>
+            </div>
+          </div>
+          <a class="ghost-link" href="./index.html" style="font-size:0.78rem;opacity:0.7;">เปิดแอปผู้ดูแล ↗</a>
+          <button id="logoutBtn" class="logout-btn" type="button">
+            <svg><use href="#i-logout"></use></svg>
+            <span>ออกจากระบบ</span>
+          </button>
+        </div>
       </aside>
 
       <main class="admin-main">
@@ -78,9 +116,21 @@
             <h2>ER Psychiatric Monitoring Center</h2>
             <span class="topbar-subtitle">Area-based Psychiatric Emergency Linkage System</span>
           </div>
-          <div class="clock-card">
-            <span id="thaiDate">--</span>
-            <strong id="thaiTime">--:--:--</strong>
+          <div style="display:flex;align-items:center;gap:1rem;">
+            <div class="clock-card">
+              <span id="thaiDate">--</span>
+              <strong id="thaiTime">--:--:--</strong>
+            </div>
+            <button id="topbarLogoutBtn" type="button" title="ออกจากระบบ" style="
+              display:flex;align-items:center;gap:0.4rem;
+              background:#fee2e2;color:#b91c1c;border:none;
+              border-radius:0.6rem;padding:0.45rem 0.9rem;
+              font-family:'Prompt',sans-serif;font-size:0.8rem;font-weight:700;
+              cursor:pointer;transition:all 0.15s;white-space:nowrap;
+            " onmouseover="this.style.background='#fecaca'" onmouseout="this.style.background='#fee2e2'">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+              ออกจากระบบ
+            </button>
           </div>
         </header>
 
@@ -126,6 +176,16 @@
                   <button id="fullscreenMapBtn" type="button" style="background: white; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.4rem; cursor: pointer; color: #475569; display: flex; align-items: center;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-11a2 2 0 0 0-2-2h-3"/></svg>
                   </button>
+                </div>
+                 <div class="map-search-bar" style="padding: 0.75rem 1rem; border-bottom: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; gap: 0.75rem; background: #f8fafc; z-index: 10; margin-bottom: 0.5rem; border-radius: 0.5rem 0.5rem 0 0;">
+                  <div style="flex: 1; min-width: 200px; display: flex; gap: 0.4rem;">
+                    <input id="mapSearchPatientInput" type="text" placeholder="🔍 ค้นหา HN ผู้ป่วย..." style="flex: 1; padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; font-family: 'Prompt', sans-serif; font-size: 0.9rem;" />
+                    <button id="mapSearchPatientBtn" type="button" style="background: #0f766e; color: white; border: none; border-radius: 0.5rem; padding: 0.5rem 1rem; font-family: 'Prompt', sans-serif; font-weight: 600; font-size: 0.9rem; cursor: pointer; white-space: nowrap;">ค้นหาผู้ป่วย</button>
+                  </div>
+                  <div style="flex: 1; min-width: 200px; display: flex; gap: 0.4rem;">
+                    <input id="mapSearchAreaInput" type="text" placeholder="📍 ค้นหา อำเภอ/จังหวัด..." style="flex: 1; padding: 0.5rem 0.75rem; border: 1px solid #cbd5e1; border-radius: 0.5rem; font-family: 'Prompt', sans-serif; font-size: 0.9rem;" />
+                    <button id="mapSearchAreaBtn" type="button" style="background: #0d9488; color: white; border: none; border-radius: 0.5rem; padding: 0.5rem 1rem; font-family: 'Prompt', sans-serif; font-weight: 600; font-size: 0.9rem; cursor: pointer; white-space: nowrap;">ค้นหาพื้นที่</button>
+                  </div>
                 </div>
                 <div id="riskMap" class="interactive-leaflet-map" style="flex: 1; min-height: 380px; width: 100%; z-index: 1;"></div>
                 <div class="map-legend">
@@ -399,14 +459,17 @@
                 <label>รหัสไปรษณีย์
                   <input name="zipcode" class="adminZipcode" inputmode="numeric" readonly />
                 </label>
-                <label>พิกัดละติจูด, ลองจิจูด
-                  <input name="latlng" class="adminLatLng" placeholder="คำนวณอัตโนมัติ หรือใช้ปุ่มขวา" readonly required />
+                <label>ละติจูด (Latitude)
+                  <input name="lat" placeholder="ยังไม่ระบุ" readonly required style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.5rem 0.75rem;" />
                 </label>
-                <label style="justify-content: flex-end; display: flex; flex-direction: column;">&nbsp;
-                  <button type="button" class="secondary-btn" id="btnGetActualGPS" style="height: 42px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #0f766e; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-family: 'Prompt', sans-serif;">
-                    📍 ดึงพิกัดปัจจุบัน
-                  </button>
+                <label>ลองจิจูด (Longitude)
+                  <input name="lng" placeholder="ยังไม่ระบุ" readonly required style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 0.5rem 0.75rem;" />
                 </label>
+              </div>
+              <div style="margin-top: 0.5rem; display: flex; justify-content: flex-end;">
+                <button type="button" class="secondary-btn" id="btnCalculateCoordinates" style="height: 42px; padding: 0 1.5rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: #0f766e; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-family: 'Prompt', sans-serif; font-weight: 600;">
+                  🔍 คำนวณพิกัดจากที่อยู่
+                </button>
               </div>
               <button class="primary-btn" type="submit">บันทึกผู้ป่วย</button>
             </form>
@@ -422,6 +485,133 @@
             <div id="alertFeed" class="alert-feed"></div>
           </article>
         </section>
+
+        <!-- ===== KNOWLEDGE MANAGEMENT SECTION ===== -->
+        <section id="admin-view-knowledge" class="admin-view">
+          <!-- Header -->
+          <div class="admin-section-head" style="margin-bottom: 1.5rem;">
+            <div>
+              <p class="eyebrow">Knowledge Base</p>
+              <h3>จัดการคลังความรู้</h3>
+              <span>สร้าง แก้ไข และจัดการเนื้อหาสำหรับผู้ดูแลผู้ป่วย</span>
+            </div>
+            <button id="openKnowledgeForm" class="primary-btn" type="button">+ เพิ่มเนื้อหาใหม่</button>
+          </div>
+
+          <!-- Filter Tabs by Category -->
+          <div class="km-tab-bar" id="kmCategoryTabs">
+            <button class="km-tab active" data-km-cat="ALL">ทั้งหมด</button>
+          </div>
+
+          <!-- Zone Filter Badges -->
+          <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;">
+            <span style="font-size: 0.82rem; color: #64748b; font-weight: 600;">กรองตามโซน:</span>
+            <button class="km-zone-btn active" data-km-zone="ALL" style="padding: 0.25rem 0.75rem; border-radius: 9999px; border: 2px solid #e2e8f0; background: #e2e8f0; color: #475569; font-family: 'Prompt', sans-serif; font-size: 0.8rem; font-weight: 600; cursor: pointer;">ทั้งหมด</button>
+            <button class="km-zone-btn" data-km-zone="GREEN" style="padding: 0.25rem 0.75rem; border-radius: 9999px; border: 2px solid #16a34a; background: #f0fdf4; color: #15803d; font-family: 'Prompt', sans-serif; font-size: 0.8rem; font-weight: 600; cursor: pointer;">🟢 Green Zone</button>
+            <button class="km-zone-btn" data-km-zone="YELLOW" style="padding: 0.25rem 0.75rem; border-radius: 9999px; border: 2px solid #ca8a04; background: #fefce8; color: #a16207; font-family: 'Prompt', sans-serif; font-size: 0.8rem; font-weight: 600; cursor: pointer;">🟡 Yellow Zone</button>
+            <button class="km-zone-btn" data-km-zone="RED" style="padding: 0.25rem 0.75rem; border-radius: 9999px; border: 2px solid #dc2626; background: #fff1f2; color: #b91c1c; font-family: 'Prompt', sans-serif; font-size: 0.8rem; font-weight: 600; cursor: pointer;">🔴 Red Zone</button>
+          </div>
+
+          <!-- Content Grid -->
+          <div id="knowledgeContentGrid" class="km-content-grid">
+            <div class="km-empty-state">กำลังโหลดข้อมูล...</div>
+          </div>
+
+          <!-- Add/Edit Form Card -->
+          <article id="knowledgeFormCard" class="admin-card admin-form-card hidden" style="margin-top: 1.5rem;">
+            <div class="admin-section-head compact">
+              <div>
+                <p class="eyebrow">Content Form</p>
+                <h3 id="knowledgeFormHeading">เพิ่มเนื้อหาใหม่</h3>
+              </div>
+              <button class="secondary-btn" id="cancelKnowledgeForm" type="button">ปิดฟอร์ม</button>
+            </div>
+            <form id="knowledgeForm" class="stack-form">
+              <input name="contentId" type="hidden" />
+              <div class="field-grid two">
+                <label>หมวดหมู่
+                  <select name="categoryId" required>
+                    <option value="">-- เลือกหมวดหมู่ --</option>
+                  </select>
+                </label>
+                <label>สถานะการแสดงผล
+                  <select name="status">
+                    <option value="published">เผยแพร่แล้ว</option>
+                    <option value="draft">ฉบับร่าง</option>
+                  </select>
+                </label>
+              </div>
+              <label>ชื่อเรื่อง / หัวข้อ
+                <input name="title" placeholder="ชื่อหัวข้อเนื้อหา" required />
+              </label>
+              <label>คำอธิบายสั้น
+                <textarea name="description" rows="2" placeholder="อธิบายเนื้อหาสั้นๆ"></textarea>
+              </label>
+              <div class="field-grid two">
+                <label>ประเภทเนื้อหาหลัก
+                  <select name="contentType" id="kmContentType">
+                    <option value="text">ข้อความ (Rich Text)</option>
+                    <option value="image">รูปภาพ</option>
+                    <option value="video_file">วิดีโอ (อัปโหลดไฟล์)</option>
+                    <option value="video_link">วิดีโอ (YouTube Link)</option>
+                  </select>
+                </label>
+                <label>กลุ่มเป้าหมาย (โซน)
+                  <select name="zoneTarget">
+                    <option value="ALL">ทุกโซน</option>
+                    <option value="GREEN">Green Zone เท่านั้น</option>
+                    <option value="YELLOW">Yellow Zone เท่านั้น</option>
+                    <option value="RED">Red Zone เท่านั้น</option>
+                    <option value="YELLOW,RED">Yellow + Red Zone</option>
+                  </select>
+                </label>
+              </div>
+
+              <!-- Dynamic: Image Upload -->
+              <div id="kmImageSection" class="km-media-section hidden">
+                <label>อัปโหลดรูปภาพ
+                  <input type="file" id="kmImageUpload" accept="image/*" />
+                </label>
+                <div id="kmImagePreview" class="km-preview-box hidden"></div>
+                <label style="margin-top: 0.5rem;">หรือใส่ URL รูปภาพโดยตรง
+                  <input name="imageUrl" placeholder="https://..." id="kmImageUrl" />
+                </label>
+              </div>
+
+              <!-- Dynamic: Video File Upload -->
+              <div id="kmVideoFileSection" class="km-media-section hidden">
+                <label>อัปโหลดไฟล์วิดีโอ
+                  <input type="file" id="kmVideoUpload" accept="video/*" />
+                </label>
+                <div id="kmVideoPreview" class="km-preview-box hidden"></div>
+                <label style="margin-top: 0.5rem;">หรือใส่ URL วิดีโอโดยตรง
+                  <input name="videoUrl" placeholder="https://docs.google.com/uc?id=..." id="kmVideoUrl" />
+                </label>
+              </div>
+
+              <!-- Dynamic: Video Link (YouTube) -->
+              <div id="kmVideoLinkSection" class="km-media-section hidden">
+                <label>YouTube / Video URL
+                  <input name="videoUrl" placeholder="https://www.youtube.com/watch?v=..." id="kmVideoLinkUrl" />
+                </label>
+                <p style="font-size: 0.8rem; color: #64748b; margin: 0.25rem 0 0;">รองรับ YouTube, Vimeo หรือ URL วิดีโอทั่วไป</p>
+              </div>
+
+              <!-- Dynamic: Rich Text -->
+              <div id="kmTextSection" class="km-media-section">
+                <label>เนื้อหา (HTML รองรับ)
+                  <textarea name="richTextContent" rows="6" placeholder="เขียนเนื้อหา หรือใส่ HTML เช่น &lt;b&gt;ข้อความสำคัญ&lt;/b&gt;, &lt;ul&gt;&lt;li&gt;รายการ&lt;/li&gt;&lt;/ul&gt;"></textarea>
+                </label>
+              </div>
+
+              <label>ลำดับการแสดงผล
+                <input name="order" type="number" min="1" value="1" />
+              </label>
+              <button class="primary-btn" type="submit">บันทึกเนื้อหา</button>
+            </form>
+          </article>
+        </section>
+        <!-- ===== END KNOWLEDGE MANAGEMENT SECTION ===== -->
       </main>
     </div>
 
@@ -442,6 +632,6 @@
     </dialog>
 
     <script src="./app.js?v=20"></script>
-    <script src="./admin.js?v=17"></script>
+    <script src="./admin.js?v=21"></script>
   </body>
 </html>
