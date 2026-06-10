@@ -490,33 +490,152 @@ function makeAssessment(patient, score, zone, createdAt = thaiTimestamp(), answe
 }
 
 function classifyRisk(score) {
-  if (score < 7) return "GREEN";
-  if (score <= 13) return "YELLOW";
-  return "RED";
+  const s = Number(score || 0);
+  if (s < 7) {
+    return "GREEN";
+  } else if (s >= 7 && s <= 13) {
+    return "YELLOW";
+  } else {
+    return "RED";
+  }
 }
 
 function zoneClass(zone) {
   if (!zone) return "green"; // หากไม่มีข้อมูล Zone ให้แสดงผลเป็นสีเขียว (Green) เป็นค่าเริ่มต้น
   return String(zone).toLowerCase(); // แปลงเป็น String ก่อนเสมอเพื่อป้องกัน Error
 }
-function formatThaiDateTime(value) {
+function toIsoDateString(value) {
+  if (!value) return "";
+  let str = String(value).trim();
+  
+  const tIndex = str.indexOf("T");
+  if (tIndex > -1) str = str.substring(0, tIndex);
+
+  let match = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (match) {
+    let year = parseInt(match[1], 10);
+    let month = String(parseInt(match[2], 10)).padStart(2, '0');
+    let day = String(parseInt(match[3], 10)).padStart(2, '0');
+    if (year > 2400) year -= 543;
+    return `${year}-${month}-${day}`;
+  }
+  
+  match = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (match) {
+    let day = String(parseInt(match[1], 10)).padStart(2, '0');
+    let month = String(parseInt(match[2], 10)).padStart(2, '0');
+    let year = parseInt(match[3], 10);
+    if (year > 2400) year -= 543;
+    return `${year}-${month}-${day}`;
+  }
+  
+  const date = new Date(str);
+  if (isNaN(date.getTime())) return str;
+  
+  let year = date.getFullYear();
+  if (year > 2400) year -= 543;
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatThaiDateTime(value, dateOnly = false) {
   if (!value) return "-";
-  const date = new Date(value);
+  
+  let normalizedValue = value;
+  if (typeof value === "string") {
+    const match = value.match(/^(\d{4})/);
+    if (match) {
+      let y = parseInt(match[1], 10);
+      if (y > 2400) {
+        normalizedValue = (y - 543) + value.slice(4);
+      }
+    }
+  }
+  
+  const date = new Date(normalizedValue);
   if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
-    dateStyle: "medium",
-    timeStyle: "short"
-  }).format(date);
+  
+  const isDateOnly = dateOnly || (typeof value === "string" && value.length <= 10 && !value.includes("T"));
+  
+  if (isDateOnly) {
+    if (typeof normalizedValue === "string") {
+      const parts = normalizedValue.split("T")[0].split(/[-/]/);
+      if (parts.length === 3) {
+        let y = parseInt(parts[0], 10);
+        let m = parseInt(parts[1], 10) - 1;
+        let d = parseInt(parts[2], 10);
+        const localDate = new Date(y, m, d);
+        return new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
+          year: "numeric",
+          month: "long",
+          day: "numeric"
+        }).format(localDate);
+      }
+    }
+    return new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
+      year: "numeric",
+      month: "long",
+      day: "numeric"
+    }).format(date);
+  } else {
+    let displayDate = date;
+    if (date.getFullYear() > 2400) {
+      displayDate = new Date(date);
+      displayDate.setFullYear(date.getFullYear() - 543);
+    }
+    return new Intl.DateTimeFormat("th-TH-u-ca-buddhist", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }).format(displayDate);
+  }
 }
 
 function calculateAge(dob) {
   if (!dob) return "";
-  const birth = new Date(dob);
+  const ceDob = toIsoDateString(dob);
+  const birth = new Date(ceDob);
   const today = new Date();
   let age = today.getFullYear() - birth.getFullYear();
   const m = today.getMonth() - birth.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age -= 1;
   return age;
+}
+
+function initDateInputHelpers(container = document) {
+  const dateInputs = container.querySelectorAll('input[type="date"]');
+  dateInputs.forEach(input => {
+    let helper = input.parentNode.querySelector('.be-date-helper');
+    if (!helper) {
+      helper = document.createElement('div');
+      helper.className = 'be-date-helper';
+      helper.style.fontSize = '0.82rem';
+      helper.style.color = '#0f766e';
+      helper.style.marginTop = '0.25rem';
+      helper.style.fontWeight = '500';
+      input.parentNode.appendChild(helper);
+    }
+
+    const updateHelper = () => {
+      const val = input.value;
+      if (val) {
+        const formatted = formatThaiDateTime(val, true);
+        helper.textContent = `แสดงผล พ.ศ.: ${formatted}`;
+      } else {
+        helper.textContent = 'แสดงผล พ.ศ.: ยังไม่ได้เลือกวันที่';
+      }
+    };
+
+    updateHelper();
+
+    input.removeEventListener('input', updateHelper);
+    input.addEventListener('input', updateHelper);
+    input.removeEventListener('change', updateHelper);
+    input.addEventListener('change', updateHelper);
+  });
 }
 
 function findPatient(patientCode) {
@@ -670,7 +789,8 @@ function populatePatientEdit(patient) {
   form.elements.reviewFullName.value = patient.fullName || "";
   form.elements.reviewGender.value = patient.gender || "ชาย";
   form.elements.reviewDx.value = patient.dx || "";
-  form.elements.reviewDischargeDate.value = patient.dischargeDate ? new Date(patient.dischargeDate).toISOString().slice(0, 10) : "";
+  form.elements.reviewDischargeDate.value = patient.dischargeDate ? toIsoDateString(patient.dischargeDate) : "";
+  initDateInputHelpers(wrap);
 }
 
 function patientFromEdit(basePatient) {
@@ -683,7 +803,7 @@ function patientFromEdit(basePatient) {
     fullName: form.elements.reviewFullName.value || basePatient.fullName,
     gender: form.elements.reviewGender.value || basePatient.gender,
     dx: form.elements.reviewDx.value || basePatient.dx,
-    dischargeDate: form.elements.reviewDischargeDate.value || basePatient.dischargeDate
+    dischargeDate: toIsoDateString(form.elements.reviewDischargeDate.value) || basePatient.dischargeDate
   };
 }
 
@@ -1225,8 +1345,8 @@ function initAssessmentForm() {
     event.preventDefault();
     
     // ป้องกันการกดยืนยันซ้ำซ้อนขณะที่ระบบกำลังส่งข้อมูล
-    if (typeof assessmentSubmitting !== 'undefined' && assessmentSubmitting) return;
-    window.assessmentSubmitting = true;
+    if (assessmentSubmitting) return;
+    assessmentSubmitting = true;
 
     try {
       const form = event.currentTarget;
@@ -1315,7 +1435,7 @@ function initAssessmentForm() {
        AppDialog.alert("เกิดข้อผิดพลาดในระบบประเมิน กรุณาลองใหม่อีกครั้ง", "ข้อผิดพลาด", "warning");
     } finally {
       // ปลดล็อคการกดปุ่ม
-      window.assessmentSubmitting = false; 
+      assessmentSubmitting = false; 
     }
   });
 }
@@ -1381,24 +1501,161 @@ function showResultDialog(assessment) {
   dialog.showModal();
 }
 
-function filterKnowledgeByZone(zone) {
-  const knowledgeGrids = document.querySelectorAll(".knowledge-grid");
-  if (!knowledgeGrids.length) return;
+// =========================================================
+// KNOWLEDGE VIEW - User Frontend (App)
+// =========================================================
 
+/** Category icons mapping from local images */
+const KM_CAT_ICONS = {
+  "CAT-01": "./1.รู้โรค.png",
+  "CAT-02": "./2.อารมณ์ดี.png",
+  "CAT-03": "./3.คุยกัน.png",
+  "CAT-04": "./4.กิจวัตร.png",
+  "CAT-05": "./5.ปลอดยา.png",
+  "CAT-06": "./6.ใจสบาย.png",
+  "CAT-07": "./7.ตกลงกัน.png",
+  "CAT-08": "./8.ปลอดภัย.png",
+  "CAT-09": "./9.อยู่ร่วมกัน.png"
+};
+
+let kmUserActiveCat = "ALL";
+let kmUserActiveZone = null; // null = no zone filter (show all published)
+
+/** Build category tab bar and render initial content */
+function renderKnowledge() {
+  buildKmUserTabs();
+  renderKmUserContent();
+}
+
+/** Build category tabs in the user knowledge view */
+function buildKmUserTabs() {
+  const tabBar = document.querySelector("#knowledgeViewTabs");
+  if (!tabBar) return;
+
+  const cats = storage.get("knowledgeCategories", []);
+  const sorted = [...cats].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+
+  tabBar.innerHTML = `
+    <button class="knowledge-view-tab ${kmUserActiveCat === "ALL" ? "active" : ""}" data-kcat="ALL">
+      📚<span>ทั้งหมด</span>
+    </button>
+  ` + sorted.map(c => {
+    const icon = KM_CAT_ICONS[c.categoryId];
+    const img = icon ? `<img src="${escapeHtml(icon)}" alt="${escapeHtml(c.name)}" />` : `📖`;
+    return `<button class="knowledge-view-tab ${kmUserActiveCat === c.categoryId ? "active" : ""}" data-kcat="${c.categoryId}">
+      ${img}<span>${escapeHtml(c.name)}</span>
+    </button>`;
+  }).join("");
+
+  tabBar.querySelectorAll(".knowledge-view-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      kmUserActiveCat = btn.dataset.kcat;
+      tabBar.querySelectorAll(".knowledge-view-tab").forEach(t => t.classList.toggle("active", t === btn));
+      renderKmUserContent();
+    });
+  });
+}
+
+/** Render knowledge content items */
+function renderKmUserContent() {
+  const container = document.querySelector("#knowledgeList");
+  if (!container) return;
+
+  let contents = storage.get("knowledgeContent", []);
+
+  // Only show published items
+  contents = contents.filter(c => (c.status || "published") === "published");
+
+  // Filter by category
+  if (kmUserActiveCat !== "ALL") {
+    contents = contents.filter(c => c.categoryId === kmUserActiveCat);
+  }
+
+  // Filter by active zone (set from assessment result modal)
+  if (kmUserActiveZone) {
+    contents = contents.filter(c => {
+      const z = c.zoneTarget || "ALL";
+      return z === "ALL" || z === kmUserActiveZone || z.split(",").map(v => v.trim()).includes(kmUserActiveZone);
+    });
+  }
+
+  // Sort by order
+  contents.sort((a, b) => Number(a.order || 99) - Number(b.order || 99));
+
+  if (contents.length === 0) {
+    const msg = kmUserActiveZone
+      ? `ไม่พบเนื้อหาสำหรับกลุ่มเสี่ยง ${kmUserActiveZone} ในหมวดนี้`
+      : "ยังไม่มีเนื้อหาในหมวดนี้";
+    container.innerHTML = `<div class="km-user-empty">📚 ${msg}</div>`;
+    return;
+  }
+
+  container.innerHTML = contents.map(c => renderKmUserItem(c)).join("");
+}
+
+/** Build HTML for a single knowledge content item (user view) */
+function renderKmUserItem(c) {
+  // Media section
+  let mediaHtml = "";
+  if (c.contentType === "image" && c.imageUrl) {
+    mediaHtml = `<div class="km-content-item-media"><img src="${escapeHtml(c.imageUrl)}" alt="${escapeHtml(c.title)}" loading="lazy" /></div>`;
+  } else if (c.contentType === "video_link" && c.videoUrl) {
+    const ytEmbed = getKmYoutubeEmbed(c.videoUrl);
+    if (ytEmbed) {
+      mediaHtml = `<div class="km-content-item-media"><iframe src="${ytEmbed}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`;
+    }
+  } else if (c.contentType === "video_file" && c.videoUrl) {
+    mediaHtml = `<div class="km-content-item-media"><video src="${escapeHtml(c.videoUrl)}" controls loading="lazy" style="width:100%;"></video></div>`;
+  }
+
+  // Rich text / description body
+  const richHtml = c.richTextContent
+    ? `<div class="km-content-item-rich">${c.richTextContent}</div>`
+    : "";
+  const descHtml = c.description
+    ? `<p class="km-content-item-desc">${escapeHtml(c.description)}</p>`
+    : "";
+
+  return `
+    <article class="km-content-item">
+      ${mediaHtml}
+      <div class="km-content-item-body">
+        <h3 class="km-content-item-title">${escapeHtml(c.title || "-")}</h3>
+        ${descHtml}
+        ${richHtml}
+      </div>
+    </article>`;
+}
+
+/** YouTube embed URL helper */
+function getKmYoutubeEmbed(url) {
+  if (!url) return null;
+  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  return null;
+}
+
+/** Called from assessment result modal: filters knowledge by zone and navigates there */
+function filterKnowledgeByZone(zone) {
+  // Set the zone filter for user view
+  kmUserActiveZone = zone || null;
+  kmUserActiveCat = "ALL";
+
+  // Re-render category tabs and content
+  buildKmUserTabs();
+  renderKmUserContent();
+
+  // Also highlight category tabs that match the zone for legacy compatibility
+  // (for the home page knowledge-grid section with static icons)
+  const knowledgeGrids = document.querySelectorAll(".knowledge-grid");
   knowledgeGrids.forEach((grid) => {
     const items = grid.querySelectorAll(".knowledge-icon-btn");
     items.forEach((item) => {
       const text = item.querySelector("span")?.textContent?.trim() || "";
-      let itemZone = "GREEN"; 
-
-      if (["รู้โรค", "อารมณ์ดี", "คุยกัน"].includes(text)) {
-        itemZone = "GREEN";   
-      } else if (["กิจวัตร", "ปลอดยา", "ใจสบาย"].includes(text)) {
-        itemZone = "YELLOW";  
-      } else if (["ตกลงกัน", "ปลอดภัย", "อยู่ร่วมกัน"].includes(text)) {
-        itemZone = "RED";     
-      }
-
+      let itemZone = "GREEN";
+      if (["รู้โรค", "อารมณ์ดี", "คุยกัน"].includes(text)) itemZone = "GREEN";
+      else if (["กิจวัตร", "ปลอดยา", "ใจสบาย"].includes(text)) itemZone = "YELLOW";
+      else if (["ตกลงกัน", "ปลอดภัย", "อยู่ร่วมกัน"].includes(text)) itemZone = "RED";
       if (!zone || itemZone === zone) {
         item.style.setProperty("display", "flex", "important");
       } else {
@@ -1407,6 +1664,7 @@ function filterKnowledgeByZone(zone) {
     });
   });
 }
+
 
 function renderHomeNextAssessment() {
   const dateTarget = document.querySelector("#nextAssessmentDateText");
@@ -1582,13 +1840,7 @@ function showAssessmentDetail(assessmentId) {
   dialog.showModal();
 }
 
-function renderKnowledge() {
-  const container = document.querySelector("#knowledgeList");
-  if (!container) return;
-  container.innerHTML = knowledgeItems
-    .map(([title, detail]) => `<article class="knowledge-item"><strong>${title}</strong><p>${detail}</p></article>`)
-    .join("");
-}
+
 
 function contactItems(cm) {
   return [
