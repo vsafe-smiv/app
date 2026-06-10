@@ -12,7 +12,7 @@
     <link rel="shortcut icon" type="image/png" href="./icon%20app.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon%20app.png" />
-    <link rel="stylesheet" href="./styles.css?v=14" />
+    <link rel="stylesheet" href="./styles.css?v=15" />
     <style>
       /* =========================================
          CSS สำหรับจัดการคลังความรู้ 3x3
@@ -751,10 +751,17 @@
         <section id="view-knowledge" class="view">
           <div class="section-title">
             <p class="eyebrow">Caregiver Knowledge</p>
-            <h2>เนื้อหาคลังความรู้</h2>
+            <h2>คลังความรู้สำหรับผู้ดูแล</h2>
           </div>
-          <div id="knowledgeList" class="knowledge-list muted-box">
-             อยู่ระหว่างการพัฒนาเนื้อหาโดยผู้ดูแลระบบ
+          <!-- Category icon tabs (populated dynamically) -->
+          <div class="knowledge-view-tabs" id="knowledgeViewTabs">
+            <button class="knowledge-view-tab active" data-kcat="ALL">
+              📚<span>ทั้งหมด</span>
+            </button>
+          </div>
+          <!-- Knowledge content area (populated dynamically) -->
+          <div class="km-content-area" id="knowledgeList">
+            <div class="km-user-empty">กำลังโหลดเนื้อหา...</div>
           </div>
         </section>
 
@@ -799,6 +806,6 @@
       </div>
     </dialog>
 
-    <script src="./app.js?v=20"></script>
+    <script src="./app.js?v=21"></script>
   </body>
 </html>
