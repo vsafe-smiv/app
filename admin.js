@@ -2232,12 +2232,12 @@ async function handleKmFileUpload(file, type) {
       );
     } else {
       const errMsg = res.error || "ข้อผิดพลาดไม่ทราบสาเหตุ";
-      statusEl.innerHTML = `
-        <span style="color:#b91c1c;font-weight:600;">❌ อัปโหลดล้มเหลว</span>
-        <button onclick="document.querySelector('${type === \"image\" ? \"#kmImageUpload\" : \"#kmVideoUpload\"}').click()"
-          style="margin-left:0.5rem;padding:0.2rem 0.6rem;background:#fee2e2;color:#b91c1c;border:none;border-radius:0.4rem;cursor:pointer;font-family:'Prompt',sans-serif;font-size:0.78rem;font-weight:600;">
-          🔄 ลองใหม่
-        </button>`;
+      const retryInputId = type === "image" ? "#kmImageUpload" : "#kmVideoUpload";
+      statusEl.innerHTML =
+        `<span style="color:#b91c1c;font-weight:600;">❌ อัปโหลดล้มเหลว</span>` +
+        `<button onclick="document.querySelector('${retryInputId}').click()"` +
+        ` style="margin-left:0.5rem;padding:0.2rem 0.6rem;background:#fee2e2;color:#b91c1c;border:none;border-radius:0.4rem;cursor:pointer;font-family:'Prompt',sans-serif;font-size:0.78rem;font-weight:600;">` +
+        `🔄 ลองใหม่</button>`;
       AppDialog.alert("ไม่สามารถอัปโหลดไฟล์ได้:\n" + errMsg, "อัปโหลดล้มเหลว", "error");
     }
 
