@@ -1376,12 +1376,22 @@ function renderAssessmentItems() {
 }
 
 function updateLiveScore() {
-  const score = riskDomains.reduce((sum, item) => {
+  let score = 0;
+  for (const item of riskDomains) {
     const checked = document.querySelector(`input[name="${item.key}"]:checked`);
-    return sum + Number(checked?.value || 0);
-  }, 0);
+    const val = Number(checked?.value ?? 0);
+    score += isNaN(val) ? 0 : val;
+  }
+  score = Math.round(Number(score));
+  if (isNaN(score) || score < 0) score = 0;
+
   const liveScore = document.querySelector("#liveScore");
-  if (liveScore) liveScore.textContent = `${score} / 20`;
+  if (liveScore) {
+    const zone = classifyRisk(score);
+    // แสดงสีตาม Zone แบบ real-time
+    liveScore.textContent = `${score} / 20`;
+    liveScore.style.color = zone === "RED" ? "#ef4444" : zone === "YELLOW" ? "#f59e0b" : "#22c55e";
+  }
 }
 
 // ==========================================
@@ -1416,16 +1426,23 @@ function initAssessmentForm() {
 
       // 2. คำนวณคะแนน (ใช้เฉพาะคะแนนประเมินปัจจุบันที่กดเลือกหน้าเว็บเท่านั้น ห้ามบวก Baseline)
       const answers = {};
-      const finalScore = riskDomains.reduce((sum, item) => {
-        const value = Number(form.querySelector(`input[name="${item.key}"]:checked`)?.value || 0);
-        answers[item.key] = value;
-        return sum + value;
-      }, 0);
+      let finalScore = 0;
+      for (const item of riskDomains) {
+        const checked = form.querySelector(`input[name="${item.key}"]:checked`);
+        const val = Number(checked?.value ?? 0);
+        answers[item.key] = isNaN(val) ? 0 : val;
+        finalScore += answers[item.key];
+      }
+      // รับรองเป็น integer เสมอ — ป้องกัน NaN / ทศนิยมผิดพลาด
+      finalScore = Math.round(Number(finalScore));
+      if (isNaN(finalScore) || finalScore < 0) finalScore = 0;
 
       // จัดระดับความเสี่ยงตามคะแนนที่ได้จริงในการประเมินครั้งนี้
       const zone = classifyRisk(finalScore);
-      
-      console.log(`ประเมินสำเร็จ: คะแนนประเมินเพียวๆ = ${finalScore} คะแนน (${zone})`);
+
+      console.log(`[V-SAFE] ผลประเมิน: คะแนน = ${finalScore} | Zone = ${zone}`);
+      console.log('[V-SAFE] คำตอบแต่ละข้อ:', answers);
+
 
       // 3. สร้างข้อมูลการประเมิน
       const assessment = makeAssessment(patient, finalScore, zone, new Date().toISOString(), answers);
@@ -1451,19 +1468,24 @@ function initAssessmentForm() {
 
       // 6. แจ้งเตือน SOS (เฉพาะ RED ZONE)
       if (zone === "RED") {
+        // อัปเดต Local Storage ทันทีเพื่อ UI แสดงผลได้เบื้องต้น (Optimistic UI)
         const alerts = storage.get("alerts", []);
-        const newAlert = { 
-          ...assessment, 
-          alertId: `ALT-${Date.now()}`, 
-          acknowledged: false 
+        const newAlert = {
+          alertId: `ALT-${Date.now()}`,
+          patientCode: assessment.patientCode,
+          hn: assessment.hn,
+          dx: assessment.dx,
+          district: assessment.district,
+          score: assessment.score,
+          zone: assessment.zone,
+          status: assessment.status,
+          createdAt: assessment.createdAt,
+          acknowledged: false
         };
         alerts.unshift(newAlert);
         storage.set("alerts", alerts);
-        
-        // ส่งข้อมูล SOS เข้าเซิร์ฟเวอร์หลังบ้าน (ถ้าฟังก์ชัน apiPost แจ้งเตือนมีอยู่)
-        if (typeof apiPost === 'function') {
-           await apiPost("saveAlert", newAlert);
-        }
+        // หมายเหตุ: ไม่ต้องเรียก apiPost("saveAlert") แยกต่างหาก
+        // Backend สร้าง Alert อัตโนมัติแล้วภายใน saveAssessment (Atomic)
       }
 
       // 7. บันทึกผลประเมินขึ้นคลาวด์และแสดงผล
