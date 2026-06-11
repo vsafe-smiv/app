@@ -447,26 +447,20 @@
             <button type="button" class="secondary-btn" id="authLookupPatient"><svg class="btn-icon"><use href="#i-shield"></use></svg>ตรวจสอบรหัสผู้ป่วย</button>
             <div id="authPatientPreview" class="lookup-preview muted-box">กรอกรหัสผู้ป่วยเพื่อดึงข้อมูลมาตรวจสอบ</div>
             <div id="authPatientEdit" class="patient-edit-grid hidden">
-              <label>HN
-                <input name="reviewHn" readonly />
-              </label>
-              <label>คำนำหน้า
-                <input name="reviewPrefix" />
-              </label>
-              <label>ชื่อ-สกุล
-                <input name="reviewFullName" />
-              </label>
+              <input type="hidden" name="reviewHn" />
+              <input type="hidden" name="reviewPrefix" />
+              <input type="hidden" name="reviewFullName" />
               <label>เพศ
-                <select name="reviewGender">
+                <select name="reviewGender" disabled>
                   <option>ชาย</option>
                   <option>หญิง</option>
                 </select>
               </label>
               <label>การวินิจฉัย
-                <input name="reviewDx" />
+                <input name="reviewDx" readonly />
               </label>
               <label>วันที่จำหน่าย
-                <input name="reviewDischargeDate" type="date" />
+                <input name="reviewDischargeDate" type="date" readonly />
               </label>
             </div>
             <div id="authPatientChips" class="patient-mini-list"></div>
