@@ -12,7 +12,7 @@
     <link rel="shortcut icon" type="image/png" href="./icon%20app.png" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./icon%20app.png" />
-    <link rel="stylesheet" href="./styles.css?v=15" />
+    <link rel="stylesheet" href="./styles.css?v=18" />
     <style>
       /* =========================================
          CSS สำหรับจัดการคลังความรู้ 3x3
@@ -579,39 +579,39 @@
               คลังความรู้สำหรับผู้ดูแล
             </h3>
             <div class="knowledge-grid" style="padding: 0 1.25rem;">
-              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="openUserKnowledgeCategory('รู้โรค')">
                 <img src="./1.รู้โรค.png" alt="รู้โรค">
                 <span>รู้โรค</span>
               </a>
-              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="openUserKnowledgeCategory('อารมณ์ดี')">
                 <img src="./2.อารมณ์ดี.png" alt="อารมณ์ดี">
                 <span>อารมณ์ดี</span>
               </a>
-              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="openUserKnowledgeCategory('คุยกัน')">
                 <img src="./3.คุยกัน.png" alt="คุยกัน">
                 <span>คุยกัน</span>
               </a>
-              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="openUserKnowledgeCategory('กิจวัตร')">
                 <img src="./4.กิจวัตร.png" alt="กิจวัตร">
                 <span>กิจวัตร</span>
               </a>
-              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="openUserKnowledgeCategory('ปลอดยา')">
                 <img src="./5.ปลอดยา.png" alt="ปลอดยา">
                 <span>ปลอดยา</span>
               </a>
-              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="openUserKnowledgeCategory('ใจสบาย')">
                 <img src="./6.ใจสบาย.png" alt="ใจสบาย">
                 <span>ใจสบาย</span>
               </a>
-              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="openUserKnowledgeCategory('ตกลงกัน')">
                 <img src="./7.ตกลงกัน.png" alt="ตกลงกัน">
                 <span>ตกลงกัน</span>
               </a>
-              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="openUserKnowledgeCategory('ปลอดภัย')">
                 <img src="./8.ปลอดภัย.png" alt="ปลอดภัย">
                 <span>ปลอดภัย</span>
               </a>
-              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="document.querySelector('[data-nav=\'knowledge\']')?.click()">
+              <a href="javascript:void(0)" class="knowledge-icon-btn" onclick="openUserKnowledgeCategory('อยู่ร่วมกัน')">
                 <img src="./9.อยู่ร่วมกัน.png" alt="อยู่ร่วมกัน">
                 <span>อยู่ร่วมกัน</span>
               </a>
@@ -749,9 +749,14 @@
         </section>
 
         <section id="view-knowledge" class="view">
-          <div class="section-title">
-            <p class="eyebrow">Caregiver Knowledge</p>
-            <h2>คลังความรู้สำหรับผู้ดูแล</h2>
+          <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p class="eyebrow">Caregiver Knowledge</p>
+              <h2 style="margin: 0;">คลังความรู้สำหรับผู้ดูแล</h2>
+            </div>
+            <button class="auth-back" onclick="document.querySelector('[data-nav=\'home\']')?.click()" style="cursor: pointer; display: flex; align-items: center; gap: 0.25rem; font-family: inherit;">
+              <span>←</span> กลับหน้าแรก
+            </button>
           </div>
           <!-- Category icon tabs (populated dynamically) -->
           <div class="knowledge-view-tabs" id="knowledgeViewTabs">
@@ -780,11 +785,21 @@
         <button data-nav="assessment"><span><svg><use href="#i-clipboard"></use></svg></span>ประเมิน</button>
         <button data-nav="history"><span><svg><use href="#i-chart"></use></svg></span>ประวัติ</button>
         <button data-nav="help"><span><svg><use href="#i-phone"></use></svg></span>ช่วยเหลือ</button>
+        <button data-nav="knowledge" style="display: none !important;"></button>
       </nav>
     </div>
 
     <dialog id="resultDialog" class="result-dialog">
       <div id="resultContent"></div>
+    </dialog>
+
+    <dialog id="knowledgeDetailDialog" class="result-dialog">
+      <div style="background: white; border-radius: 1.25rem; overflow: hidden; max-width: 100%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -10px rgba(0,0,0,0.04); position: relative;">
+        <button id="btnCloseKmDetail" style="position: absolute; top: 0.75rem; right: 0.75rem; width: 2.2rem; height: 2.2rem; border-radius: 50%; border: none; background: rgba(0,0,0,0.06); color: #475569; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 10; transition: background 0.2s;">
+          ×
+        </button>
+        <div id="knowledgeDetailContent" style="padding: 1.25rem;"></div>
+      </div>
     </dialog>
 
     <dialog id="dueAssessmentDialog" class="result-dialog">
@@ -806,6 +821,18 @@
       </div>
     </dialog>
 
-    <script src="./app.js?v=21"></script>
+    <!-- Lightbox/Fullscreen Image Viewer -->
+    <div id="kmImageLightbox" class="km-lightbox hidden" role="dialog" aria-hidden="true" aria-label="แสดงรูปภาพขนาดเต็ม">
+      <button class="km-lightbox-close" id="btnLightboxClose" title="ปิด">ปิด</button>
+      <div class="km-lightbox-content">
+        <img id="kmLightboxImage" src="" alt="รูปภาพขนาดเต็ม" />
+      </div>
+      <div class="km-lightbox-controls">
+        <button class="km-lightbox-btn" id="btnLightboxZoomOut">ซูมออก</button>
+        <button class="km-lightbox-btn" id="btnLightboxZoomIn">ซูมเข้า</button>
+      </div>
+    </div>
+
+    <script src="./app.js?v=24"></script>
   </body>
 </html>
