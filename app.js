@@ -532,7 +532,7 @@ function makeAssessment(patient, score, zone, createdAt = thaiTimestamp(), answe
     patientCode: patient.patientCode,
     hn: patient.hn,
     dx: patient.dx,
-    patientName: patient.fullName,
+    patientName: "",
     district: patient.district,
     province: patient.province,
     score,
@@ -809,9 +809,8 @@ function escapeHtml(value = "") {
 
 function patientPreviewHtml(patient) {
   return `
-    <strong>รหัส: ${escapeHtml(patient.patientCode)}</strong><br>
-    HN ${escapeHtml(patient.hn)} | ${escapeHtml(patient.gender)} | อายุ ${calculateAge(patient.dob)} ปี<br>
-    Dx: ${escapeHtml(patient.dx)} | จำหน่าย ${formatThaiDateTime(patient.dischargeDate)}
+    <strong>รหัสผู้ป่วย: ${escapeHtml(patient.patientCode)}</strong><br>
+    อายุ ${calculateAge(patient.dob)} ปี | Dx: ${escapeHtml(patient.dx)}
   `;
 }
 
@@ -1172,10 +1171,7 @@ function renderPatientPanels() {
               
               <div style="display: flex; flex-direction: column; gap: 0.25rem;">
                 <div style="font-size: 1.15rem; font-weight: 700; color: white; letter-spacing: 0.5px;">
-                  รหัส: ${escapeHtml(patient.patientCode)}
-                </div>
-                <div style="font-size: 0.85rem; color: rgba(255, 255, 255, 0.85);">
-                  HN ${escapeHtml(patient.hn)}
+                  รหัสผู้ป่วย: ${escapeHtml(patient.patientCode)}
                 </div>
                 <div style="font-size: 0.8rem; color: rgba(255, 255, 255, 0.7); display: flex; align-items: center; gap: 0.3rem; margin-top: 0.1rem;">
                   <svg style="width: 0.9rem; height: 0.9rem; opacity: 0.8;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
@@ -1206,8 +1202,8 @@ function renderPatientPanels() {
           return `
             <button class="patient-card ${isActive ? "active" : ""}" data-active-patient="${escapeHtml(patient.patientCode)}" type="button">
               <span class="patient-number">${index + 1}</span>
-              <strong>รหัส: ${escapeHtml(patient.patientCode)}</strong>
-              <small>HN ${escapeHtml(patient.hn)} | ${escapeHtml(patient.district)}</small>
+              <strong>รหัสผู้ป่วย: ${escapeHtml(patient.patientCode)}</strong>
+              <small>${escapeHtml(patient.district)}, ${escapeHtml(patient.province)}</small>
               <em class="${zoneClass(zone)}">${zone} ${score} คะแนน</em>
             </button>
           `;
@@ -1269,8 +1265,8 @@ function renderPatientDetailPanel() {
       <div class="detail-head">
         <span class="detail-icon"><svg><use href="#i-shield"></use></svg></span>
         <div>
-          <strong>รหัส: ${escapeHtml(patient.patientCode)}</strong>
-          <small>HN ${escapeHtml(patient.hn)} | Dx ${escapeHtml(patient.dx || "-")}</small>
+          <strong>รหัสผู้ป่วย: ${escapeHtml(patient.patientCode)}</strong>
+          <small>Dx ${escapeHtml(patient.dx || "-")} | ${escapeHtml(patient.district || "-")}</small>
         </div>
         <em>${zone}</em>
       </div>
@@ -1294,7 +1290,7 @@ function renderAssessmentPatientOptions() {
   const linked = getLinkedPatients();
   const active = getActivePatient();
   select.innerHTML = linked.length
-    ? linked.map((patient) => `<option value="${escapeHtml(patient.patientCode)}">HN ${escapeHtml(patient.hn)} - รหัส ${escapeHtml(patient.patientCode)}</option>`).join("")
+    ? linked.map((patient) => `<option value="${escapeHtml(patient.patientCode)}">รหัสผู้ป่วย: ${escapeHtml(patient.patientCode)}</option>`).join("")
     : `<option value="">ยังไม่มีผู้ป่วยในบัญชีนี้</option>`;
   if (active) select.value = active.patientCode;
 }
@@ -2114,7 +2110,7 @@ function renderHistory() {
             <button class="timeline-item ${zoneClass(item.zone)}" data-assessment-detail="${escapeHtml(item.id)}" type="button">
               <span class="timeline-icon"><svg><use href="#i-${item.zone === "GREEN" ? "shield" : item.zone === "YELLOW" ? "eye" : "phone"}"></use></svg></span>
               <strong>${zoneAdvice[item.zone].label} | ${item.score} คะแนน</strong>
-              <p>HN ${item.hn} | ${item.dx} | ${item.district}</p>
+              <p>รหัสผู้ป่วย: ${escapeHtml(item.patientCode)} | ${escapeHtml(item.dx)} | ${escapeHtml(item.district)}</p>
               <small>${formatThaiDateTime(item.createdAt)}</small>
             </button>
           `
@@ -2139,7 +2135,7 @@ function showAssessmentDetail(assessmentId) {
     <div class="result-header ${zoneClass(assessment.zone)}">
       <p>${formatThaiDateTime(assessment.createdAt)}</p>
       <h2>${advice.label} | ${assessment.score} คะแนน</h2>
-      <span>HN ${escapeHtml(assessment.hn)} | Dx ${escapeHtml(assessment.dx)} | ${escapeHtml(assessment.district)}</span>
+      <span>รหัสผู้ป่วย: ${escapeHtml(assessment.patientCode)} | Dx ${escapeHtml(assessment.dx)} | ${escapeHtml(assessment.district)}</span>
     </div>
     <h3>รายละเอียดคำตอบ</h3>
     <ul class="readonly-answer-list">${answerRows}</ul>
