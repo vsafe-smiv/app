@@ -253,6 +253,12 @@ const zoneAdvice = {
 // ==========================================
 // DATA LAYER (Local Cache & Cloud Sync)
 // ==========================================
+
+// TTL สำหรับ Sync — ข้ามการโหลดซ้ำถ้าข้อมูลยังใหม่อยู่ (3 นาที)
+const SYNC_TTL_MS = 3 * 60 * 1000;
+// Timeout สำหรับ Fetch — ป้องกัน GAS แขวนนานเกิน 12 วินาที
+const SYNC_TIMEOUT_MS = 12000;
+
 const storage = {
   get(key, fallback) {
     try {
@@ -271,49 +277,97 @@ const storage = {
 };
 
 function clearCloudDataCache() {
-  ["patients", "caregivers", "caseManagers", "assessments", "alerts", "addressData"].forEach((key) => storage.remove(key));
+  ["patients", "caregivers", "caseManagers", "assessments", "alerts", "addressData", "knowledgeCategories", "knowledgeContent", "lastSync"].forEach((key) => storage.remove(key));
+}
+
+/** ตรวจสอบว่าข้อมูลใน Cache ยังสด (ภายใน TTL) หรือไม่ */
+function isSyncFresh() {
+  const lastSync = storage.get("lastSync", 0);
+  return (Date.now() - lastSync) < SYNC_TTL_MS;
+}
+
+/** บันทึก timestamp ของ Sync ล่าสุด */
+function markSyncTime() {
+  storage.set("lastSync", Date.now());
+}
+
+/** ดึงข้อมูลทั้งหมดจาก Cloud พร้อม Timeout 12 วินาที */
+async function fetchAllDataWithTimeout() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SYNC_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${VSAFE_GAS_URL}?action=getAllData`, { signal: controller.signal });
+    return await response.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** บันทึกข้อมูลที่ได้จาก Cloud ลง localStorage */
+function applyCloudData(data) {
+  if (!data || !data.ok) return false;
+  storage.set("patients", mergeLatestAssessmentsIntoPatients(data.patients || [], data.assessments || []));
+  storage.set("caregivers", data.caregivers || []);
+  storage.set("caseManagers", data.caseManagers || []);
+  storage.set("assessments", data.assessments || []);
+  storage.set("alerts", data.alerts || []);
+  storage.set("addressData", data.addressData || []);
+  storage.set("knowledgeCategories", data.knowledgeCategories || []);
+  storage.set("knowledgeContent", data.knowledgeContent || []);
+  markSyncTime();
+  return true;
 }
 
 async function syncDataFromCloud(options = {}) {
-  const { silent = false, message = "กำลังโหลดข้อมูล" } = options;
+  const { silent = false, force = false, message = "กำลังโหลดข้อมูล" } = options;
+
+  // ข้ามถ้าข้อมูลยังใหม่อยู่ (ไม่ใช่ force sync)
+  if (!force && isSyncFresh() && storage.get("patients", null) !== null) {
+    return true;
+  }
+
   if (!silent) AppLoading.show(message);
   try {
-    const response = await fetch(`${VSAFE_GAS_URL}?action=getAllData`);
-    const data = await response.json();
-    if (data.ok) {
-      storage.set("patients", mergeLatestAssessmentsIntoPatients(data.patients || [], data.assessments || []));
-      storage.set("caregivers", data.caregivers || []);
-      storage.set("caseManagers", data.caseManagers || []);
-      storage.set("assessments", data.assessments || []);
-      storage.set("alerts", data.alerts || []);
-      
-      // ส่วนสำคัญ: บันทึกข้อมูลที่อยู่จริงที่ดึงมาจากชีต AddressData
-      storage.set("addressData", data.addressData || []); 
-      
-      console.log("ซิงค์ข้อมูลสำเร็จ!");
-      return true;
+    const data = await fetchAllDataWithTimeout();
+    const ok = applyCloudData(data);
+    if (!ok) {
+      // ล้าง lastSync เพื่อให้โหลดใหม่ครั้งหน้า
+      storage.remove("lastSync");
+      return false;
     }
-    clearCloudDataCache();
-    return false;
+    return true;
   } catch (error) {
+    if (error.name === "AbortError") {
+      console.warn("ซิงค์ข้อมูลหมดเวลา (Timeout)");
+      // ถ้ายังมี Cache เก่า ใช้ได้เลยโดยไม่ล้าง
+      if (storage.get("patients", null) !== null) return true;
+    }
     console.error("ซิงค์ข้อมูลล้มเหลว:", error);
-    clearCloudDataCache();
     return false;
   } finally {
     if (!silent) AppLoading.hide();
   }
 }
 
+/** POST ข้อมูลไปยัง Cloud แล้ว re-sync แบบ background (ไม่ block UI) */
 async function apiPost(action, payload) {
   AppLoading.show("กำลังบันทึกข้อมูล");
   try {
     const body = new URLSearchParams({ action, payload: JSON.stringify(payload) });
-    const response = await fetch(VSAFE_GAS_URL, { method: "POST", body });
-    const result = await response.json();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000); // 20s timeout สำหรับ write
+    let result;
+    try {
+      const response = await fetch(VSAFE_GAS_URL, { method: "POST", body, signal: controller.signal });
+      result = await response.json();
+    } finally {
+      clearTimeout(timer);
+    }
     if (!result.ok) {
       throw new Error(result.error || result.message || "Cloud save failed");
     }
-    await syncDataFromCloud({ silent: true });
+    // บังคับ re-sync เพื่อดึงข้อมูลที่ถูกต้องจาก Cloud (invalidate TTL)
+    syncDataFromCloud({ silent: true, force: true }).catch(() => {});
     return result;
   } catch (error) {
     console.error("V-SAFE Cloud Save Failed:", error.message);
@@ -680,6 +734,7 @@ function initNavigation() {
       document.querySelector(`#view-${view}`)?.classList.add("active");
       document.querySelectorAll(".bottom-nav button").forEach((item) => item.classList.toggle("active", item.dataset.nav === view));
       if (view === "history") renderHistory();
+      if (view === "knowledge") renderKnowledge();
       if (view === "register") {
         selectedPatientDetailCode = null;
         document.querySelector("#caregiverForm")?.classList.add("hidden");
@@ -1527,12 +1582,43 @@ function renderKnowledge() {
   renderKmUserContent();
 }
 
+/** Open knowledge view for a specific category name from homepage */
+function openUserKnowledgeCategory(categoryName) {
+  // Clear risk zone filter when clicking category directly from homepage
+  kmUserActiveZone = null;
+
+  const cats = storage.get("knowledgeCategories", []);
+  const matched = cats.find(c => c.name === categoryName);
+  if (matched) {
+    kmUserActiveCat = matched.categoryId;
+  } else {
+    kmUserActiveCat = "ALL";
+  }
+
+  // Find the hidden data-nav="knowledge" button and click it to trigger SPA routing
+  const trigger = document.querySelector('[data-nav="knowledge"]');
+  if (trigger) {
+    trigger.click();
+  } else {
+    // Fallback manual view swap
+    document.querySelectorAll(".view").forEach((item) => item.classList.remove("active"));
+    document.querySelector(`#view-knowledge`)?.classList.add("active");
+    document.querySelectorAll(".bottom-nav button").forEach((item) => item.classList.remove("active"));
+    renderKnowledge();
+  }
+}
+
 /** Build category tabs in the user knowledge view */
 function buildKmUserTabs() {
   const tabBar = document.querySelector("#knowledgeViewTabs");
   if (!tabBar) return;
 
   const cats = storage.get("knowledgeCategories", []);
+  if (cats.length === 0) {
+    tabBar.innerHTML = "";
+    return;
+  }
+
   const sorted = [...cats].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
 
   tabBar.innerHTML = `
@@ -1560,6 +1646,19 @@ function buildKmUserTabs() {
 function renderKmUserContent() {
   const container = document.querySelector("#knowledgeList");
   if (!container) return;
+
+  const cats = storage.get("knowledgeCategories", []);
+  if (cats.length === 0) {
+    container.innerHTML = `
+      <div class="km-user-empty" style="color: #b91c1c;">
+        ❌ ไม่สามารถโหลดเนื้อหาได้ กรุณาลองใหม่อีกครั้ง
+        <br>
+        <button onclick="syncDataFromCloud().then(renderKnowledge)" class="secondary-btn" style="margin-top: 0.75rem; font-family: inherit; font-size: 0.85rem; padding: 0.4rem 0.8rem; border-radius: 0.5rem; cursor: pointer;">
+          🔄 โหลดใหม่
+        </button>
+      </div>`;
+    return;
+  }
 
   let contents = storage.get("knowledgeContent", []);
 
@@ -1590,49 +1689,262 @@ function renderKmUserContent() {
     return;
   }
 
-  container.innerHTML = contents.map(c => renderKmUserItem(c)).join("");
+  container.innerHTML = contents.map(c => renderKmUserPreviewItem(c)).join("");
 }
 
-/** Build HTML for a single knowledge content item (user view) */
-function renderKmUserItem(c) {
-  // Media section
-  let mediaHtml = "";
+/** Build HTML for simplified knowledge content preview card (user view) */
+function renderKmUserPreviewItem(c) {
+  let mediaThumb = "";
   if (c.contentType === "image" && c.imageUrl) {
-    mediaHtml = `<div class="km-content-item-media"><img src="${escapeHtml(c.imageUrl)}" alt="${escapeHtml(c.title)}" loading="lazy" /></div>`;
-  } else if (c.contentType === "video_link" && c.videoUrl) {
-    const ytEmbed = getKmYoutubeEmbed(c.videoUrl);
-    if (ytEmbed) {
-      mediaHtml = `<div class="km-content-item-media"><iframe src="${ytEmbed}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe></div>`;
-    }
-  } else if (c.contentType === "video_file" && c.videoUrl) {
-    mediaHtml = `<div class="km-content-item-media"><video src="${escapeHtml(c.videoUrl)}" controls loading="lazy" style="width:100%;"></video></div>`;
+    mediaThumb = `<div class="km-item-thumb"><img src="${escapeHtml(c.imageUrl)}" alt="" loading="lazy" /></div>`;
+  } else if ((c.contentType === "video_link" || c.contentType === "video_file") && c.videoUrl) {
+    mediaThumb = `<div class="km-item-thumb video-placeholder"><span class="play-icon">▶</span></div>`;
+  } else {
+    mediaThumb = `<div class="km-item-thumb default-placeholder">📚</div>`;
   }
 
-  // Rich text / description body
-  const richHtml = c.richTextContent
-    ? `<div class="km-content-item-rich">${c.richTextContent}</div>`
-    : "";
   const descHtml = c.description
-    ? `<p class="km-content-item-desc">${escapeHtml(c.description)}</p>`
+    ? `<p class="km-item-short-desc">${escapeHtml(c.description.length > 80 ? c.description.substring(0, 80) + "..." : c.description)}</p>`
     : "";
 
   return `
-    <article class="km-content-item">
-      ${mediaHtml}
-      <div class="km-content-item-body">
-        <h3 class="km-content-item-title">${escapeHtml(c.title || "-")}</h3>
+    <article class="km-content-item-preview" onclick="openKmUserDetail('${escapeHtml(c.contentId)}')">
+      ${mediaThumb}
+      <div class="km-item-preview-body">
+        <h4 class="km-item-preview-title">${escapeHtml(c.title || "-")}</h4>
         ${descHtml}
-        ${richHtml}
+        <span class="km-read-more">อ่านต่อ →</span>
       </div>
     </article>`;
 }
 
-/** YouTube embed URL helper */
-function getKmYoutubeEmbed(url) {
+/** Open details of a single knowledge content item in a dialog modal */
+function openKmUserDetail(contentId) {
+  const contents = storage.get("knowledgeContent", []);
+  const item = contents.find(c => c.contentId === contentId);
+  if (!item) return;
+
+  const detailContentEl = document.querySelector("#knowledgeDetailContent");
+  const dialog = document.querySelector("#knowledgeDetailDialog");
+  if (!detailContentEl || !dialog) return;
+
+  // Media section
+  let mediaHtml = "";
+  if (item.contentType === "image" && item.imageUrl) {
+    mediaHtml = `
+      <div class="km-content-item-media" style="margin: -1.25rem -1.25rem 1.25rem -1.25rem; cursor: zoom-in;" onclick="showFullscreenImage('${escapeHtml(item.imageUrl)}')">
+        <img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.title)}" style="width:100%; max-height: 280px; object-fit: cover; display: block;" loading="lazy" />
+      </div>`;
+  } else if (item.contentType === "video_link" && item.videoUrl) {
+    const embedUrl = getKmEmbedUrl(item.videoUrl);
+    if (embedUrl) {
+      mediaHtml = `
+        <div class="km-content-item-media km-video-container" style="margin: -1.25rem -1.25rem 1.25rem -1.25rem; position: relative; aspect-ratio: 16/9; background: #000;">
+          <div class="km-media-status" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: white; font-family: 'Prompt', sans-serif; font-size: 0.9rem; z-index: 2; pointer-events: none;">
+            <span class="km-media-msg">กำลังโหลดสื่อ…</span>
+          </div>
+          <iframe src="${embedUrl}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%; height:100%; aspect-ratio: 16/9; border: 0; display: block; position: relative; z-index: 1;" loading="lazy"
+            onload="this.parentElement.querySelector('.km-media-status').style.display = 'none';">
+          </iframe>
+        </div>`;
+    } else {
+      // Fallback: check if it's direct video link format
+      const isDirectUrl = item.videoUrl.match(/\.(mp4|webm|ogg)/i);
+      if (isDirectUrl) {
+        mediaHtml = `
+          <div class="km-content-item-media km-video-container" style="margin: -1.25rem -1.25rem 1.25rem -1.25rem; position: relative; aspect-ratio: 16/9; background: #000;">
+            <div class="km-media-status" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: white; font-family: 'Prompt', sans-serif; font-size: 0.9rem; z-index: 2; pointer-events: none;">
+              <span class="km-media-msg">กำลังโหลดสื่อ…</span>
+            </div>
+            <video src="${escapeHtml(item.videoUrl)}" controls style="width:100%; height:100%; aspect-ratio: 16/9; display: block; position: relative; z-index: 1;" loading="lazy"
+              onloadstart="this.parentElement.querySelector('.km-media-msg').textContent = 'กำลังโหลดสื่อ...';"
+              oncanplay="this.parentElement.querySelector('.km-media-status').style.display = 'none';"
+              onwaiting="this.parentElement.querySelector('.km-media-status').style.display = 'flex'; this.parentElement.querySelector('.km-media-msg').textContent = 'กำลังโหลดสื่อ...';"
+              onplaying="this.parentElement.querySelector('.km-media-status').style.display = 'none';"
+              onerror="this.parentElement.querySelector('.km-media-status').style.display = 'flex'; this.parentElement.querySelector('.km-media-msg').textContent = '❌ ไม่สามารถโหลดสื่อได้';">
+            </video>
+          </div>`;
+      } else {
+        mediaHtml = `
+          <div class="km-content-item-media" style="margin: -1.25rem -1.25rem 1.25rem -1.25rem; padding: 2rem 1rem; text-align: center; background: #f1f5f9;">
+            <p style="margin: 0 0 1rem; color: #475569; font-family: 'Prompt', sans-serif; font-size: 0.9rem;">พบลิงก์วิดีโอภายนอก</p>
+            <a href="${escapeHtml(item.videoUrl)}" target="_blank" rel="noopener noreferrer" class="primary-btn" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; padding: 0.5rem 1.2rem; border-radius: 999px;">
+              ▶ เปิดดูวิดีโอภายนอก
+            </a>
+          </div>`;
+      }
+    }
+  } else if (item.contentType === "video_file" && item.videoUrl) {
+    mediaHtml = `
+      <div class="km-content-item-media km-video-container" style="margin: -1.25rem -1.25rem 1.25rem -1.25rem; position: relative; aspect-ratio: 16/9; background: #000;">
+        <div class="km-media-status" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: white; font-family: 'Prompt', sans-serif; font-size: 0.9rem; z-index: 2; pointer-events: none;">
+          <span class="km-media-msg">กำลังโหลดสื่อ…</span>
+        </div>
+        <video src="${escapeHtml(item.videoUrl)}" controls style="width:100%; height:100%; aspect-ratio: 16/9; display: block; position: relative; z-index: 1;" loading="lazy"
+          onloadstart="this.parentElement.querySelector('.km-media-msg').textContent = 'กำลังโหลดสื่อ...';"
+          oncanplay="this.parentElement.querySelector('.km-media-status').style.display = 'none';"
+          onwaiting="this.parentElement.querySelector('.km-media-status').style.display = 'flex'; this.parentElement.querySelector('.km-media-msg').textContent = 'กำลังโหลดสื่อ...';"
+          onplaying="this.parentElement.querySelector('.km-media-status').style.display = 'none';"
+          onerror="this.parentElement.querySelector('.km-media-status').style.display = 'flex'; this.parentElement.querySelector('.km-media-msg').textContent = '❌ ไม่สามารถโหลดสื่อได้';">
+        </video>
+      </div>`;
+  }
+
+  const descHtml = item.description
+    ? `<p class="km-content-item-desc" style="font-size: 0.9rem; color: #475569; line-height: 1.6; margin-bottom: 1rem; white-space: pre-line;">${escapeHtml(item.description)}</p>`
+    : "";
+
+  const richHtml = item.richTextContent
+    ? `<div class="km-content-item-rich" style="font-size: 0.9rem; color: #1e293b; line-height: 1.7; border-top: 1px solid #e2e8f0; padding-top: 1rem; margin-top: 1rem;">${item.richTextContent}</div>`
+    : "";
+
+  detailContentEl.innerHTML = `
+    ${mediaHtml}
+    <div style="padding-top: 0.5rem;">
+      <h3 style="font-size: 1.25rem; font-weight: 700; color: #0f766e; margin: 0 0 0.75rem; line-height: 1.4;">${escapeHtml(item.title || "-")}</h3>
+      ${descHtml}
+      ${richHtml}
+    </div>
+  `;
+
+  // Bind close button handler
+  const closeBtn = document.querySelector("#btnCloseKmDetail");
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      detailContentEl.innerHTML = ""; // Stop audio/video playing on close
+      dialog.close();
+    };
+  }
+
+  dialog.showModal();
+}
+
+/** Dynamic platform detection for YouTube & Vimeo embed links */
+function getKmEmbedUrl(url) {
   if (!url) return null;
-  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  
+  // YouTube detection
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) {
+    return `https://www.youtube.com/embed/${ytMatch[1]}`;
+  }
+  
+  // Vimeo detection
+  const vimeoMatch = url.match(/(?:vimeo\.com\/|player\.vimeo\.com\/video\/)([0-9]+)/);
+  if (vimeoMatch) {
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  }
+  
   return null;
+}
+
+// Lightbox state variables
+let lightboxZoom = 1;
+let isDragging = false;
+let startX = 0, startY = 0;
+let translateX = 0, translateY = 0;
+let lastTranslateX = 0, lastTranslateY = 0;
+
+/** Show fullscreen image lightbox overlay */
+function showFullscreenImage(src) {
+  const lightbox = document.getElementById("kmImageLightbox");
+  const img = document.getElementById("kmLightboxImage");
+  if (!lightbox || !img) return;
+
+  img.src = src;
+  lightbox.classList.remove("hidden");
+  // Force browser reflow to trigger CSS opacity transitions
+  lightbox.offsetHeight;
+  lightbox.classList.add("active");
+  document.body.style.overflow = "hidden"; // lock page background scrolling
+}
+
+/** Initialize touch/drag and zoom action handlers for PWA fullscreen image viewer */
+function initLightboxHandlers() {
+  const lightbox = document.getElementById("kmImageLightbox");
+  const img = document.getElementById("kmLightboxImage");
+  const closeBtn = document.getElementById("btnLightboxClose");
+  const zoomInBtn = document.getElementById("btnLightboxZoomIn");
+  const zoomOutBtn = document.getElementById("btnLightboxZoomOut");
+  const container = lightbox?.querySelector(".km-lightbox-content");
+
+  if (!lightbox || !img || !closeBtn || !zoomInBtn || !zoomOutBtn || !container) return;
+
+  const updateTransform = () => {
+    img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${lightboxZoom})`;
+  };
+
+  const resetPosition = () => {
+    lightboxZoom = 1;
+    translateX = 0;
+    translateY = 0;
+    lastTranslateX = 0;
+    lastTranslateY = 0;
+    updateTransform();
+  };
+
+  closeBtn.addEventListener("click", () => {
+    lightbox.classList.remove("active");
+    setTimeout(() => {
+      lightbox.classList.add("hidden");
+      document.body.style.overflow = ""; // restore page scrolling
+      resetPosition();
+    }, 200);
+  });
+
+  zoomInBtn.addEventListener("click", () => {
+    if (lightboxZoom < 3) {
+      lightboxZoom += 0.25;
+      updateTransform();
+    }
+  });
+
+  zoomOutBtn.addEventListener("click", () => {
+    if (lightboxZoom > 0.5) {
+      lightboxZoom -= 0.25;
+      updateTransform();
+    }
+  });
+
+  // Drag and swipe behaviors
+  const dragStart = (e) => {
+    isDragging = true;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    startX = clientX - lastTranslateX;
+    startY = clientY - lastTranslateY;
+  };
+
+  const dragMove = (e) => {
+    if (!isDragging) return;
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    translateX = clientX - startX;
+    translateY = clientY - startY;
+    updateTransform();
+  };
+
+  const dragEnd = (e) => {
+    if (!isDragging) return;
+    isDragging = false;
+    
+    // Swipe down to close gesture (only when at standard zoom scale)
+    if (lightboxZoom === 1 && translateY > 100) {
+      closeBtn.click();
+      return;
+    }
+
+    lastTranslateX = translateX;
+    lastTranslateY = translateY;
+  };
+
+  container.addEventListener("mousedown", dragStart);
+  window.addEventListener("mousemove", dragMove);
+  window.addEventListener("mouseup", dragEnd);
+
+  container.addEventListener("touchstart", dragStart, { passive: true });
+  container.addEventListener("touchmove", dragMove, { passive: true });
+  container.addEventListener("touchend", dragEnd);
 }
 
 /** Called from assessment result modal: filters knowledge by zone and navigates there */
@@ -1646,7 +1958,6 @@ function filterKnowledgeByZone(zone) {
   renderKmUserContent();
 
   // Also highlight category tabs that match the zone for legacy compatibility
-  // (for the home page knowledge-grid section with static icons)
   const knowledgeGrids = document.querySelectorAll(".knowledge-grid");
   knowledgeGrids.forEach((grid) => {
     const items = grid.querySelectorAll(".knowledge-icon-btn");
@@ -1900,7 +2211,7 @@ function initSosButtons() {
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("./service-worker.js?v=20").catch(() => undefined);
+    navigator.serviceWorker.register("./service-worker.js?v=21").catch(() => undefined);
   }
 }
 
@@ -1935,6 +2246,7 @@ async function initUserApp() {
     initAssessmentForm();
     renderKnowledge();
     initSosButtons();
+    initLightboxHandlers(); // 6. เริ่มต้น Lightbox สำหรับดูรูปภาพแบบเต็มจอ
     
     // 6. แสดงผลหน้า Authenticated
     renderAuthenticatedApp();
