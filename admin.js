@@ -8,6 +8,18 @@ let selectedTrendYear = new Date().getFullYear();
 let currentPriorityPage = 1;
 const priorityItemsPerPage = 10;
 
+// =================================================================
+// PERFORMANCE: แคช patientCurrentRows และ debounce renderDashboard
+// =================================================================
+
+// Module-level cache สำหรับ patientCurrentRows (หมดอายุใน 10 วินาที)
+let _cachedPatientRows = null;
+let _rowsCacheTime = 0;
+const ROWS_CACHE_TTL = 10000; // 10 วินาที
+
+// Debounce timer สำหรับ renderDashboard
+let _dashDebounceTimer = null;
+
 // =========================================================
 // LOADING OVERLAY HELPERS
 // =========================================================
@@ -70,15 +82,20 @@ async function initAdmin() {
     setLoadingStatus("โหลด Dashboard...");
     renderDashboard();
 
-    // Auto-Sync เบื้องหลังทุก 30 วินาที
+    // Auto-Sync เบื้องหลังทุก 3 นาที (ลดจาก 30 วิ เพื่อลดการเรียก GAS บ่อยเกินไป)
     setInterval(async () => {
       try {
-        await syncDataFromCloud({ silent: true });
-        renderDashboard();
+        await syncDataFromCloud({ silent: true, force: true });
+        // แค่ re-render ถ้าอยู่ที่หน้า Dashboard
+        const activeBtn = document.querySelector(".side-nav [data-admin-view].active");
+        if (!activeBtn || activeBtn.dataset.adminView === "dashboard") {
+          invalidatePatientRowsCache();
+          renderDashboard();
+        }
       } catch (e) {
         console.warn("Auto-sync failed:", e.message);
       }
-    }, 30000);
+    }, 180000); // 3 นาที
 
     hideAdminLoading();
 
@@ -751,9 +768,14 @@ function statusByZone(zone) {
 }
 
 function patientCurrentRows() {
+  const now = Date.now();
+  // คืนค่า Cache ถ้ายังใหม่อยู่
+  if (_cachedPatientRows && (now - _rowsCacheTime) < ROWS_CACHE_TTL) {
+    return _cachedPatientRows;
+  }
   const patients = storage.get("patients", []);
   const assessments = storage.get("assessments", []);
-  return patients.map((patient) => {
+  _cachedPatientRows = patients.map((patient) => {
     const latest = assessments
       .filter((assessment) => assessment.patientCode === patient.patientCode)
       .sort((a, b) => timestampMs(b.createdAt) - timestampMs(a.createdAt))[0];
@@ -766,23 +788,37 @@ function patientCurrentRows() {
       updatedAt: latest?.createdAt || patient.updatedAt || patient.createdAt || patient.dischargeDate || thaiTimestamp()
     };
   });
+  _rowsCacheTime = now;
+  return _cachedPatientRows;
+}
+
+/** ล้าง Cache patientCurrentRows (เรียกเมื่อมีข้อมูลใหม่) */
+function invalidatePatientRowsCache() {
+  _cachedPatientRows = null;
+  _rowsCacheTime = 0;
 }
 
 function renderDashboard() {
   if (!document.body.classList.contains("admin-body")) return;
-  const rows = patientCurrentRows();
-  renderOverview(rows);
-  renderTrend(rows);
-  renderMap(rows);
-  renderPriorityTable();
-  renderDashboardAlerts();
-  showUnacknowledgedSos();
-  
-  // อัปเดตรายการแจ้งเตือนเมื่ออยู่ในหน้าจอแจ้งเตือน
-  const activeViewBtn = document.querySelector(".side-nav [data-admin-view].active");
-  if (activeViewBtn && activeViewBtn.dataset.adminView === "alerts") {
-    renderAlertFeed();
-  }
+  // Debounce: รวม render ซ้ำๆ ที่เกิดขึ้นติดๆ กันให้เป็นครั้งเดียว
+  if (_dashDebounceTimer) clearTimeout(_dashDebounceTimer);
+  _dashDebounceTimer = setTimeout(() => {
+    _dashDebounceTimer = null;
+    invalidatePatientRowsCache();
+    const rows = patientCurrentRows();
+    renderOverview(rows);
+    renderTrend(rows);
+    renderMap(rows);
+    renderPriorityTable();
+    renderDashboardAlerts();
+    showUnacknowledgedSos();
+
+    // อัปเดตรายการแจ้งเตือนเมื่ออยู่ในหน้าจอแจ้งเตือน
+    const activeViewBtn = document.querySelector(".side-nav [data-admin-view].active");
+    if (activeViewBtn && activeViewBtn.dataset.adminView === "alerts") {
+      renderAlertFeed();
+    }
+  }, 150);
 }
 
 function renderOverview(rows) {
@@ -1198,11 +1234,10 @@ function renderDashboardAlerts() {
   
   const allAlerts = storage.get("alerts", []);
   
-  // กรองเฉพาะแจ้งเตือนที่ยังไม่ได้รับทราบ และเรียงจากใหม่ไปเก่า
+  // เรียงจากใหม่ไปเก่า และแสดงไม่เกิน 10 รายการล่าสุด (รวมทั้งที่รับทราบแล้วและยังไม่ได้รับทราบ)
   const recentAlerts = allAlerts
-    .filter(a => isAlertActive(a))
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 4);
+    .slice(0, 10);
 
   if (recentAlerts.length === 0) {
     container.innerHTML = `<div class="muted-box" style="margin-top: 1rem;">ไม่มีการแจ้งเตือนใหม่</div>`;
@@ -1211,12 +1246,19 @@ function renderDashboardAlerts() {
 
   container.innerHTML = recentAlerts.map(alert => {
     const isRed = alert.zone === "RED";
+    const isActive = isAlertActive(alert);
     const borderClass = isRed ? "alert-red" : "alert-yellow";
+    
+    // สไตล์สำหรับการแจ้งเตือนที่รับทราบแล้ว (dimmed style & gray status dot)
+    const opacityStyle = isActive ? "" : "opacity: 0.6; border-left-color: #64748b;";
+    const dotStyle = isActive ? "" : "background-color: #64748b;";
+    const statusText = isActive ? `${alert.zone || "RED"} ZONE` : `${alert.zone || "RED"} (รับทราบแล้ว)`;
+
     return `
-      <article class="alert-item ${borderClass}" style="cursor: pointer; transition: transform 0.2s;" onclick="showPatientDetail('${escapeHtml(alert.patientCode)}')">
-        <div class="status-dot"></div>
+      <article class="alert-item ${borderClass}" style="cursor: pointer; transition: transform 0.2s; ${opacityStyle}" onclick="showPatientDetail('${escapeHtml(alert.patientCode)}')">
+        <div class="status-dot" style="${dotStyle}"></div>
         <div class="alert-info">
-          <strong>${alert.zone || "RED"} ZONE | HN ${escapeHtml(alert.hn || "-")} | ${escapeHtml(alert.dx || "-")}</strong>
+          <strong>${statusText} | HN ${escapeHtml(alert.hn || "-")} | ${escapeHtml(alert.dx || "-")}</strong>
           <small>${alert.score || 0} คะแนน | อ.${escapeHtml(alert.district || "-")}</small>
         </div>
         <div style="margin-left: auto; color: #64748b; display: flex; align-items: center;" title="คลิกเพื่อดูข้อมูลผู้ป่วย">
