@@ -2362,9 +2362,12 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener("DOMContentLoaded", () => {
   const knowledgeTabBtn = document.querySelector('[data-nav="knowledge"]');
   if (knowledgeTabBtn) {
-    knowledgeTabBtn.addEventListener("click", () => {
-      if (typeof filterKnowledgeByZone === "function") {
-        filterKnowledgeByZone(null);
+    knowledgeTabBtn.addEventListener("click", (e) => {
+      // ป้องกันการล้างฟิลเตอร์กรณีเปลี่ยนหน้าด้วยการกดผ่านโค้ด (e.isTrusted จะเป็น false)
+      if (e && e.isTrusted) {
+        if (typeof filterKnowledgeByZone === "function") {
+          filterKnowledgeByZone(null);
+        }
       }
     });
   }
