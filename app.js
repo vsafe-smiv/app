@@ -1820,18 +1820,18 @@ function openKmUserDetail(contentId) {
   let mediaHtml = "";
   if (item.contentType === "image" && item.imageUrl) {
     mediaHtml = `
-      <div class="km-content-item-media" style="margin: -1.25rem -1.25rem 1.25rem -1.25rem; cursor: zoom-in;" onclick="showFullscreenImage('${escapeHtml(item.imageUrl)}')">
+      <div class="km-content-item-media" style="cursor: zoom-in; width: 100%;" onclick="showFullscreenImage('${escapeHtml(item.imageUrl)}')">
         <img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.title)}" style="width:100%; max-height: 280px; object-fit: cover; display: block;" loading="lazy" />
       </div>`;
   } else if (item.contentType === "video_link" && item.videoUrl) {
     const embedUrl = getKmEmbedUrl(item.videoUrl);
     if (embedUrl) {
       mediaHtml = `
-        <div class="km-content-item-media km-video-container" style="margin: -1.25rem -1.25rem 1.25rem -1.25rem; position: relative; aspect-ratio: 16/9; background: #000;">
+        <div class="km-content-item-media km-video-container" style="position: relative; aspect-ratio: 16/9; background: #000; width: 100%;">
           <div class="km-media-status" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: white; font-family: 'Prompt', sans-serif; font-size: 0.9rem; z-index: 2; pointer-events: none;">
             <span class="km-media-msg">กำลังโหลดสื่อ…</span>
           </div>
-          <iframe src="${embedUrl}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%; height:100%; aspect-ratio: 16/9; border: 0; display: block; position: relative; z-index: 1;" loading="lazy"
+          <iframe src="${embedUrl}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%; height:100%; border: 0; display: block; position: absolute; inset: 0;" loading="lazy"
             onload="this.parentElement.querySelector('.km-media-status').style.display = 'none';">
           </iframe>
         </div>`;
@@ -1840,11 +1840,11 @@ function openKmUserDetail(contentId) {
       const isDirectUrl = item.videoUrl.match(/\.(mp4|webm|ogg)/i);
       if (isDirectUrl) {
         mediaHtml = `
-          <div class="km-content-item-media km-video-container" style="margin: -1.25rem -1.25rem 1.25rem -1.25rem; position: relative; aspect-ratio: 16/9; background: #000;">
+          <div class="km-content-item-media km-video-container" style="position: relative; aspect-ratio: 16/9; background: #000; width: 100%;">
             <div class="km-media-status" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: white; font-family: 'Prompt', sans-serif; font-size: 0.9rem; z-index: 2; pointer-events: none;">
               <span class="km-media-msg">กำลังโหลดสื่อ…</span>
             </div>
-            <video src="${escapeHtml(item.videoUrl)}" controls style="width:100%; height:100%; aspect-ratio: 16/9; display: block; position: relative; z-index: 1;" loading="lazy"
+            <video src="${escapeHtml(item.videoUrl)}" controls style="width:100%; height:100%; display: block; position: absolute; inset: 0; object-fit: contain;" loading="lazy"
               onloadstart="this.parentElement.querySelector('.km-media-msg').textContent = 'กำลังโหลดสื่อ...';"
               oncanplay="this.parentElement.querySelector('.km-media-status').style.display = 'none';"
               onwaiting="this.parentElement.querySelector('.km-media-status').style.display = 'flex'; this.parentElement.querySelector('.km-media-msg').textContent = 'กำลังโหลดสื่อ...';"
@@ -1854,7 +1854,7 @@ function openKmUserDetail(contentId) {
           </div>`;
       } else {
         mediaHtml = `
-          <div class="km-content-item-media" style="margin: -1.25rem -1.25rem 1.25rem -1.25rem; padding: 2rem 1rem; text-align: center; background: #f1f5f9;">
+          <div class="km-content-item-media" style="padding: 2rem 1rem; text-align: center; background: #f1f5f9;">
             <p style="margin: 0 0 1rem; color: #475569; font-family: 'Prompt', sans-serif; font-size: 0.9rem;">พบลิงก์วิดีโอภายนอก</p>
             <a href="${escapeHtml(item.videoUrl)}" target="_blank" rel="noopener noreferrer" class="primary-btn" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none; padding: 0.5rem 1.2rem; border-radius: 999px;">
               ▶ เปิดดูวิดีโอภายนอก
@@ -1867,21 +1867,21 @@ function openKmUserDetail(contentId) {
     if (driveId) {
       const embedUrl = `https://drive.google.com/file/d/${driveId}/preview`;
       mediaHtml = `
-        <div class="km-content-item-media km-video-container" style="margin: -1.25rem -1.25rem 1.25rem -1.25rem; position: relative; aspect-ratio: 16/9; background: #000;">
+        <div class="km-content-item-media km-video-container" style="position: relative; aspect-ratio: 16/9; background: #000; width: 100%;">
           <div class="km-media-status" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: white; font-family: 'Prompt', sans-serif; font-size: 0.9rem; z-index: 2; pointer-events: none;">
             <span class="km-media-msg">กำลังโหลดสื่อ…</span>
           </div>
-          <iframe src="${embedUrl}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%; height:100%; aspect-ratio: 16/9; border: 0; display: block; position: relative; z-index: 1;" loading="lazy"
+          <iframe src="${embedUrl}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%; height:100%; border: 0; display: block; position: absolute; inset: 0;" loading="lazy"
             onload="this.parentElement.querySelector('.km-media-status').style.display = 'none';">
           </iframe>
         </div>`;
     } else {
       mediaHtml = `
-        <div class="km-content-item-media km-video-container" style="margin: -1.25rem -1.25rem 1.25rem -1.25rem; position: relative; aspect-ratio: 16/9; background: #000;">
+        <div class="km-content-item-media km-video-container" style="position: relative; aspect-ratio: 16/9; background: #000; width: 100%;">
           <div class="km-media-status" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: white; font-family: 'Prompt', sans-serif; font-size: 0.9rem; z-index: 2; pointer-events: none;">
             <span class="km-media-msg">กำลังโหลดสื่อ…</span>
           </div>
-          <video src="${escapeHtml(item.videoUrl)}" controls style="width:100%; height:100%; aspect-ratio: 16/9; display: block; position: relative; z-index: 1;" loading="lazy"
+          <video src="${escapeHtml(item.videoUrl)}" controls style="width:100%; height:100%; display: block; position: absolute; inset: 0; object-fit: contain;" loading="lazy"
             onloadstart="this.parentElement.querySelector('.km-media-msg').textContent = 'กำลังโหลดสื่อ...';"
             oncanplay="this.parentElement.querySelector('.km-media-status').style.display = 'none';"
             onwaiting="this.parentElement.querySelector('.km-media-status').style.display = 'flex'; this.parentElement.querySelector('.km-media-msg').textContent = 'กำลังโหลดสื่อ...';"
@@ -1902,7 +1902,7 @@ function openKmUserDetail(contentId) {
 
   detailContentEl.innerHTML = `
     ${mediaHtml}
-    <div style="padding-top: 0.5rem;">
+    <div style="padding: 1.25rem;">
       <h3 style="font-size: 1.25rem; font-weight: 700; color: #0f766e; margin: 0 0 0.75rem; line-height: 1.4;">${escapeHtml(item.title || "-")}</h3>
       ${descHtml}
       ${richHtml}
