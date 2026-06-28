@@ -557,13 +557,17 @@
                   </select>
                 </label>
                 <label>กลุ่มเป้าหมาย (โซน)
-                  <select name="zoneTarget">
-                    <option value="ALL">ทุกโซน</option>
-                    <option value="GREEN">Green Zone เท่านั้น</option>
-                    <option value="YELLOW">Yellow Zone เท่านั้น</option>
-                    <option value="RED">Red Zone เท่านั้น</option>
-                    <option value="YELLOW,RED">Yellow + Red Zone</option>
-                  </select>
+                  <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.35rem; font-family: 'Prompt', sans-serif; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 0.35rem; font-weight: 500; cursor: pointer; color: #16a34a; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 0.35rem 0.75rem; border-radius: 0.5rem; user-select: none; font-size: 0.9rem; margin: 0;">
+                      <input type="checkbox" name="zoneTargetCheckbox" value="GREEN" style="cursor: pointer; width: 1.1rem; height: 1.1rem; accent-color: #16a34a; margin: 0;" />🟢 เขียว
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.35rem; font-weight: 500; cursor: pointer; color: #ca8a04; background: #fefce8; border: 1px solid #fef08a; padding: 0.35rem 0.75rem; border-radius: 0.5rem; user-select: none; font-size: 0.9rem; margin: 0;">
+                      <input type="checkbox" name="zoneTargetCheckbox" value="YELLOW" style="cursor: pointer; width: 1.1rem; height: 1.1rem; accent-color: #ca8a04; margin: 0;" />🟡 เหลือง
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.35rem; font-weight: 500; cursor: pointer; color: #dc2626; background: #fff1f2; border: 1px solid #fecdd3; padding: 0.35rem 0.75rem; border-radius: 0.5rem; user-select: none; font-size: 0.9rem; margin: 0;">
+                      <input type="checkbox" name="zoneTargetCheckbox" value="RED" style="cursor: pointer; width: 1.1rem; height: 1.1rem; accent-color: #dc2626; margin: 0;" />🔴 แดง
+                    </label>
+                  </div>
                 </label>
               </div>
 
