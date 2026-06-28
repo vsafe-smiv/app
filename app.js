@@ -2491,3 +2491,23 @@ function setUserAddressValues(formScope = document, values = {}) {
   provinceSelect.value = values.province || "";
 
   const districts = addressList
+    .filter(item => item.province === provinceSelect.value)
+    .map(item => item.amphoe);
+  districtSelect.innerHTML = '<option value="">-- เลือกอำเภอ --</option>' +
+    [...new Set(districts)].filter(Boolean).sort().map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join("");
+  districtSelect.value = values.district || "";
+
+  const subdistricts = addressList
+    .filter(item => item.province === provinceSelect.value && item.amphoe === districtSelect.value)
+    .map(item => item.tambon);
+  subdistrictSelect.innerHTML = '<option value="">-- เลือกตำบล --</option>' +
+    [...new Set(subdistricts)].filter(Boolean).sort().map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+  subdistrictSelect.value = values.subdistrict || "";
+
+  const match = addressList.find(item =>
+    item.province === provinceSelect.value &&
+    item.amphoe === districtSelect.value &&
+    item.tambon === subdistrictSelect.value
+  );
+  if (zipcodeInput) zipcodeInput.value = values.zipcode || match?.zipcode || "";
+}
