@@ -2263,9 +2263,12 @@ async function handleKmFileUpload(file, type) {
       // Show preview
       if (previewEl) {
         previewEl.classList.remove("hidden");
+        const driveId = getGoogleDriveFileId(res.url);
         previewEl.innerHTML = type === "image"
           ? `<img src="${res.url}" alt="Preview" style="width:100%;max-height:200px;object-fit:contain;" />`
-          : `<video src="${res.url}" controls style="width:100%;max-height:200px;"></video>`;
+          : (driveId
+              ? `<iframe src="https://drive.google.com/file/d/${driveId}/preview" style="width:100%;height:200px;border:0;"></iframe>`
+              : `<video src="${res.url}" controls style="width:100%;max-height:200px;"></video>`);
       }
 
       // Success status
@@ -2393,4 +2396,16 @@ async function deleteKnowledgeContent(contentId) {
 
   AppDialog.alert("ลบเนื้อหาเรียบร้อยแล้ว", "สำเร็จ", "success");
   renderKmContentGrid();
+}
+
+/** Extract Google Drive File ID from URL */
+function getGoogleDriveFileId(url) {
+  if (!url) return null;
+  const idMatch = url.match(/[?&]id=([^&]+)/);
+  if (idMatch) return idMatch[1];
+  const dMatch = url.match(/\/d\/([^/]+)/);
+  if (dMatch) return dMatch[1];
+  const srcMatch = url.match(/src="([^"]+)"/);
+  if (srcMatch) return getGoogleDriveFileId(srcMatch[1]);
+  return null;
 }
