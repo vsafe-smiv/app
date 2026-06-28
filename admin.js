@@ -2024,9 +2024,10 @@ function renderKmContentGrid() {
 /** Build HTML for a single knowledge card */
 function renderKmCard(c) {
   const catName = getKmCategoryName(c.categoryId);
-  const zoneLabel = { GREEN: "🟢 Green", YELLOW: "🟡 Yellow", RED: "🔴 Red", ALL: "🌐 ทุกโซน", "YELLOW,RED": "🟡🔴 Yellow+Red" };
+  const zoneMap = { GREEN: "🟢 เขียว", YELLOW: "🟡 เหลือง", RED: "🔴 แดง", ALL: "🌐 ทุกโซน" };
   const zone = c.zoneTarget || "ALL";
-  const accentClass = zone.includes(",") ? "YELLOW,RED" : zone;
+  const label = zone.split(",").map(z => zoneMap[z.trim()] || z.trim()).join(" + ");
+  const accentClass = zone.includes(",") ? "YELLOW" : zone;
   const statusBadge = c.status === "draft"
     ? `<span class="km-status-badge draft">ฉบับร่าง</span>`
     : `<span class="km-status-badge published">เผยแพร่</span>`;
@@ -2052,7 +2053,7 @@ function renderKmCard(c) {
         <span class="km-card-category">${escapeHtml(catName)}</span>
         <p class="km-card-title">${escapeHtml(c.title || "-")}</p>
         <p class="km-card-desc">${escapeHtml(c.description || "")}</p>
-        <span class="km-zone-badge ${accentClass === "YELLOW,RED" ? "YELLOW" : accentClass}">${zoneLabel[zone] || zone}</span>
+        <span class="km-zone-badge ${accentClass}">${label}</span>
         ${statusBadge}
       </div>
       <div class="km-card-footer">
@@ -2166,7 +2167,14 @@ function openKnowledgeEditForm(contentId) {
   form.querySelector("[name='title']").value = item.title || "";
   form.querySelector("[name='description']").value = item.description || "";
   form.querySelector("[name='contentType']").value = item.contentType || "text";
-  form.querySelector("[name='zoneTarget']").value = item.zoneTarget || "ALL";
+  const zoneVal = item.zoneTarget || "ALL";
+  form.querySelectorAll("[name='zoneTargetCheckbox']").forEach(cb => {
+    if (zoneVal === "ALL") {
+      cb.checked = true;
+    } else {
+      cb.checked = zoneVal.split(",").map(v => v.trim()).includes(cb.value);
+    }
+  });
   form.querySelector("[name='order']").value = item.order || 1;
   form.querySelector("[name='richTextContent']").value = item.richTextContent || "";
 
@@ -2307,6 +2315,14 @@ function fileToBase64(file) {
 /** Submit knowledge form (save or update) */
 async function submitKnowledgeForm(form) {
   const data = Object.fromEntries(new FormData(form).entries());
+  
+  const selectedZones = Array.from(form.querySelectorAll("[name='zoneTargetCheckbox']:checked")).map(cb => cb.value);
+  if (selectedZones.length === 0) {
+    AppDialog.alert("กรุณาเลือกกลุ่มเป้าหมาย (โซน) อย่างน้อย 1 รายการ", "ไม่ครบถ้วน", "warning");
+    return;
+  }
+  data.zoneTarget = selectedZones.join(",");
+
   const contentType = data.contentType || "text";
 
   // Resolve the correct URL fields based on content type
