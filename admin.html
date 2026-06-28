@@ -121,6 +121,17 @@
               <span id="thaiDate">--</span>
               <strong id="thaiTime">--:--:--</strong>
             </div>
+            <!-- ปุ่มล้างแคชข้อมูล (ใช้เมื่อแก้ไขข้อมูลใน Sheets โดยตรง) -->
+            <button id="clearCacheBtn" type="button" title="ล้างแคชและโหลดข้อมูลใหม่จาก Google Sheets" style="
+              display:flex;align-items:center;gap:0.4rem;
+              background:#fef3c7;color:#92400e;border:none;
+              border-radius:0.6rem;padding:0.45rem 0.9rem;
+              font-family:'Prompt',sans-serif;font-size:0.8rem;font-weight:700;
+              cursor:pointer;transition:all 0.15s;white-space:nowrap;
+            " onmouseover="this.style.background='#fde68a'" onmouseout="this.style.background='#fef3c7'">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+              ล้างแคช / โหลดใหม่
+            </button>
             <button id="topbarLogoutBtn" type="button" title="ออกจากระบบ" style="
               display:flex;align-items:center;gap:0.4rem;
               background:#fee2e2;color:#b91c1c;border:none;
@@ -628,14 +639,3 @@
       </div>
     </dialog>
 
-    <dialog id="adminDetailDialog" class="admin-detail-dialog">
-      <div>
-        <button class="admin-dialog-close" type="button" data-close-admin-dialog>ปิด</button>
-        <div id="adminDetailContent"></div>
-      </div>
-    </dialog>
-
-    <script src="./app.js?v=24"></script>
-    <script src="./admin.js?v=22"></script>
-  </body>
-</html>
