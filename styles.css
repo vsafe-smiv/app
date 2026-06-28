@@ -4756,6 +4756,7 @@ dialog::backdrop {
   border-color: #0f766e;
 }
 .km-item-thumb {
+  position: relative;
   width: 5rem;
   height: 5rem;
   border-radius: 0.75rem;
@@ -4765,6 +4766,22 @@ dialog::backdrop {
   justify-content: center;
   flex-shrink: 0;
   background: #f1f5f9;
+}
+.km-item-thumb .play-icon-overlay {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  pointer-events: none;
+  border: 1.5px solid white;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  text-indent: 1px;
 }
 .km-item-thumb img {
   width: 100%;
