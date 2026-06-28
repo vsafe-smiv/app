@@ -422,11 +422,42 @@ async function apiGet(action, params = {}) {
 // ==========================================
 // CAREGIVER & PATIENT LOGIC
 // ==========================================
+
+// ── Test user (ไม่บันทึกข้อมูลจริง) ───────────────────────────────────────────
+const TEST_USER_CREDENTIALS = { username: "14171", password: "14171" };
+const TEST_CAREGIVER_ID = "TEST-USER-14171";
+const TEST_CAREGIVER = {
+  id: TEST_CAREGIVER_ID,
+  username: "14171",
+  password: "14171",
+  prefix: "นาย",
+  fullName: "ผู้ใช้ทดสอบ",
+  gender: "male",
+  relationship: "other",
+  phone: "0000000000",
+  province: "",
+  district: "",
+  subdistrict: "",
+  zipcode: "",
+  addressLine: "",
+  patientCodes: [],
+  activePatientCode: null,
+  isTestUser: true,
+  createdAt: "2024-01-01 00:00:00"
+};
+
+function isTestUserSession() {
+  return sessionStorage.getItem("vsafe:testUserSession") === "1";
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function getCaregivers() {
   return storage.get("caregivers", []);
 }
 
 function getCurrentCaregiver() {
+  // คืนค่า test caregiver เมื่ออยู่ใน session ทดสอบ (ไม่อ่านจาก storage จริง)
+  if (isTestUserSession()) return TEST_CAREGIVER;
   const id = storage.get("currentCaregiverId", null);
   if (!id) return null;
   return getCaregivers().find((caregiver) => caregiver.id === id) || null;
@@ -439,6 +470,7 @@ function setCurrentCaregiver(caregiver) {
 }
 
 function logoutCaregiver() {
+  sessionStorage.removeItem("vsafe:testUserSession");
   localStorage.removeItem("vsafe:currentCaregiverId");
   renderAuthenticatedApp();
 }
@@ -931,6 +963,18 @@ function initAuthFlow() {
     const payload = Object.fromEntries(new FormData(event.currentTarget).entries());
     const username = normalizeCredential(payload.username);
     const password = normalizeCredential(payload.password);
+
+    // ── Test user: เข้าสู่ระบบโดยไม่บันทึกข้อมูลลงฐานข้อมูล ──────────────────
+    if (
+      username === normalizeCredential(TEST_USER_CREDENTIALS.username) &&
+      password === normalizeCredential(TEST_USER_CREDENTIALS.password)
+    ) {
+      sessionStorage.setItem("vsafe:testUserSession", "1");
+      renderAuthenticatedApp();
+      return;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     const caregiver = getCaregivers().find((item) => normalizeCredential(item.username) === username && normalizeCredential(item.password) === password);
     if (!caregiver) {
     AppDialog.alert("Username หรือ Password ไม่ถูกต้อง", "เข้าสู่ระบบล้มเหลว", "warning");
