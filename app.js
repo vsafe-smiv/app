@@ -350,12 +350,13 @@ async function syncDataFromCloud(options = {}) {
 }
 
 /** POST ข้อมูลไปยัง Cloud แล้ว re-sync แบบ background (ไม่ block UI) */
-async function apiPost(action, payload) {
+async function apiPost(action, payload, timeoutMs = 20000) {
   AppLoading.show("กำลังบันทึกข้อมูล");
   try {
     const body = new URLSearchParams({ action, payload: JSON.stringify(payload) });
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20000); // 20s timeout สำหรับ write
+    const actualTimeout = action === "uploadMedia" ? Math.max(timeoutMs, 300000) : timeoutMs;
+    const timer = setTimeout(() => controller.abort(), actualTimeout); // 20s timeout สำหรับ write, 5m สำหรับ uploadMedia
     let result;
     try {
       const response = await fetch(VSAFE_GAS_URL, { method: "POST", body, signal: controller.signal });
