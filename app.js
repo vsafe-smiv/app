@@ -280,6 +280,26 @@ function clearCloudDataCache() {
   ["patients", "caregivers", "caseManagers", "assessments", "alerts", "addressData", "knowledgeCategories", "knowledgeContent", "lastSync"].forEach((key) => storage.remove(key));
 }
 
+/**
+ * ล้าง Cache ทั้งหมด (localStorage + GAS CacheService) แล้ว force re-sync
+ * ใช้เมื่อแก้ไข / ลบข้อมูลใน Google Sheets โดยตรงแล้วหน้าเว็บยังค้างข้อมูลเก่า
+ */
+async function forceClearAllCache() {
+  // 1. ล้าง localStorage ฝั่ง browser ทันที
+  clearCloudDataCache();
+
+  // 2. ล้าง CacheService ฝั่ง GAS server (non-blocking, ไม่ block UI)
+  try {
+    await fetch(`${VSAFE_GAS_URL}?action=clearCache`);
+  } catch (e) {
+    console.warn("forceClearAllCache: ล้าง server cache ไม่สำเร็จ (ใช้ local clear แทน):", e.message);
+  }
+
+  // 3. บังคับ sync ใหม่จาก Cloud
+  const ok = await syncDataFromCloud({ force: true, message: "กำลังโหลดข้อมูลใหม่จาก Google Sheets..." });
+  return ok;
+}
+
 /** ตรวจสอบว่าข้อมูลใน Cache ยังสด (ภายใน TTL) หรือไม่ */
 function isSyncFresh() {
   const lastSync = storage.get("lastSync", 0);
@@ -2471,23 +2491,3 @@ function setUserAddressValues(formScope = document, values = {}) {
   provinceSelect.value = values.province || "";
 
   const districts = addressList
-    .filter(item => item.province === provinceSelect.value)
-    .map(item => item.amphoe);
-  districtSelect.innerHTML = '<option value="">-- เลือกอำเภอ --</option>' +
-    [...new Set(districts)].filter(Boolean).sort().map(d => `<option value="${escapeHtml(d)}">${escapeHtml(d)}</option>`).join("");
-  districtSelect.value = values.district || "";
-
-  const subdistricts = addressList
-    .filter(item => item.province === provinceSelect.value && item.amphoe === districtSelect.value)
-    .map(item => item.tambon);
-  subdistrictSelect.innerHTML = '<option value="">-- เลือกตำบล --</option>' +
-    [...new Set(subdistricts)].filter(Boolean).sort().map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
-  subdistrictSelect.value = values.subdistrict || "";
-
-  const match = addressList.find(item =>
-    item.province === provinceSelect.value &&
-    item.amphoe === districtSelect.value &&
-    item.tambon === subdistrictSelect.value
-  );
-  if (zipcodeInput) zipcodeInput.value = values.zipcode || match?.zipcode || "";
-}
