@@ -202,6 +202,29 @@ function initLogout() {
   document.querySelector("#logoutBtn")?.addEventListener("click", handler);
   // Topbar logout button
   document.querySelector("#topbarLogoutBtn")?.addEventListener("click", handler);
+
+  // ปุ่มล้างแคช / โหลดใหม่
+  document.querySelector("#clearCacheBtn")?.addEventListener("click", async () => {
+    const btn = document.querySelector("#clearCacheBtn");
+    if (btn) { btn.disabled = true; btn.textContent = "กำลังล้างแคช..."; }
+    try {
+      const ok = await forceClearAllCache();
+      if (ok) {
+        invalidatePatientRowsCache();
+        renderDashboard();
+        await AppDialog.alert("โหลดข้อมูลใหม่จาก Google Sheets สำเร็จแล้ว", "ล้างแคชสำเร็จ", "success");
+      } else {
+        await AppDialog.alert("ไม่สามารถโหลดข้อมูลจาก Server ได้ กรุณาตรวจสอบอินเทอร์เน็ต", "โหลดข้อมูลไม่สำเร็จ", "warning");
+      }
+    } catch (e) {
+      console.error("forceClearAllCache error:", e);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg> ล้างแคช / โหลดใหม่`;
+      }
+    }
+  });
 }
 
 
