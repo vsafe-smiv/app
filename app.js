@@ -1717,7 +1717,12 @@ function renderKmUserPreviewItem(c) {
   if (c.contentType === "image" && c.imageUrl) {
     mediaThumb = `<div class="km-item-thumb"><img src="${escapeHtml(c.imageUrl)}" alt="" loading="lazy" /></div>`;
   } else if ((c.contentType === "video_link" || c.contentType === "video_file") && c.videoUrl) {
-    mediaThumb = `<div class="km-item-thumb video-placeholder"><span class="play-icon">▶</span></div>`;
+    const thumbUrl = getKmVideoThumbnailUrl(c.videoUrl);
+    if (thumbUrl) {
+      mediaThumb = `<div class="km-item-thumb"><img src="${escapeHtml(thumbUrl)}" alt="" loading="lazy" /><span class="play-icon-overlay">▶</span></div>`;
+    } else {
+      mediaThumb = `<div class="km-item-thumb video-placeholder"><span class="play-icon">▶</span></div>`;
+    }
   } else {
     mediaThumb = `<div class="km-item-thumb default-placeholder">📚</div>`;
   }
@@ -1794,19 +1799,33 @@ function openKmUserDetail(contentId) {
       }
     }
   } else if (item.contentType === "video_file" && item.videoUrl) {
-    mediaHtml = `
-      <div class="km-content-item-media km-video-container" style="margin: -1.25rem -1.25rem 1.25rem -1.25rem; position: relative; aspect-ratio: 16/9; background: #000;">
-        <div class="km-media-status" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: white; font-family: 'Prompt', sans-serif; font-size: 0.9rem; z-index: 2; pointer-events: none;">
-          <span class="km-media-msg">กำลังโหลดสื่อ…</span>
-        </div>
-        <video src="${escapeHtml(item.videoUrl)}" controls style="width:100%; height:100%; aspect-ratio: 16/9; display: block; position: relative; z-index: 1;" loading="lazy"
-          onloadstart="this.parentElement.querySelector('.km-media-msg').textContent = 'กำลังโหลดสื่อ...';"
-          oncanplay="this.parentElement.querySelector('.km-media-status').style.display = 'none';"
-          onwaiting="this.parentElement.querySelector('.km-media-status').style.display = 'flex'; this.parentElement.querySelector('.km-media-msg').textContent = 'กำลังโหลดสื่อ...';"
-          onplaying="this.parentElement.querySelector('.km-media-status').style.display = 'none';"
-          onerror="this.parentElement.querySelector('.km-media-status').style.display = 'flex'; this.parentElement.querySelector('.km-media-msg').textContent = '❌ ไม่สามารถโหลดสื่อได้';">
-        </video>
-      </div>`;
+    const driveId = getGoogleDriveFileId(item.videoUrl);
+    if (driveId) {
+      const embedUrl = `https://drive.google.com/file/d/${driveId}/preview`;
+      mediaHtml = `
+        <div class="km-content-item-media km-video-container" style="margin: -1.25rem -1.25rem 1.25rem -1.25rem; position: relative; aspect-ratio: 16/9; background: #000;">
+          <div class="km-media-status" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: white; font-family: 'Prompt', sans-serif; font-size: 0.9rem; z-index: 2; pointer-events: none;">
+            <span class="km-media-msg">กำลังโหลดสื่อ…</span>
+          </div>
+          <iframe src="${embedUrl}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="width:100%; height:100%; aspect-ratio: 16/9; border: 0; display: block; position: relative; z-index: 1;" loading="lazy"
+            onload="this.parentElement.querySelector('.km-media-status').style.display = 'none';">
+          </iframe>
+        </div>`;
+    } else {
+      mediaHtml = `
+        <div class="km-content-item-media km-video-container" style="margin: -1.25rem -1.25rem 1.25rem -1.25rem; position: relative; aspect-ratio: 16/9; background: #000;">
+          <div class="km-media-status" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: white; font-family: 'Prompt', sans-serif; font-size: 0.9rem; z-index: 2; pointer-events: none;">
+            <span class="km-media-msg">กำลังโหลดสื่อ…</span>
+          </div>
+          <video src="${escapeHtml(item.videoUrl)}" controls style="width:100%; height:100%; aspect-ratio: 16/9; display: block; position: relative; z-index: 1;" loading="lazy"
+            onloadstart="this.parentElement.querySelector('.km-media-msg').textContent = 'กำลังโหลดสื่อ...';"
+            oncanplay="this.parentElement.querySelector('.km-media-status').style.display = 'none';"
+            onwaiting="this.parentElement.querySelector('.km-media-status').style.display = 'flex'; this.parentElement.querySelector('.km-media-msg').textContent = 'กำลังโหลดสื่อ...';"
+            onplaying="this.parentElement.querySelector('.km-media-status').style.display = 'none';"
+            onerror="this.parentElement.querySelector('.km-media-status').style.display = 'flex'; this.parentElement.querySelector('.km-media-msg').textContent = '❌ ไม่สามารถโหลดสื่อได้';">
+          </video>
+        </div>`;
+    }
   }
 
   const descHtml = item.description
@@ -1838,7 +1857,7 @@ function openKmUserDetail(contentId) {
   dialog.showModal();
 }
 
-/** Dynamic platform detection for YouTube & Vimeo embed links */
+/** Dynamic platform detection for YouTube, Vimeo, & Google Drive embed links */
 function getKmEmbedUrl(url) {
   if (!url) return null;
   
@@ -1853,7 +1872,39 @@ function getKmEmbedUrl(url) {
   if (vimeoMatch) {
     return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
   }
+
+  // Google Drive detection
+  const driveId = getGoogleDriveFileId(url);
+  if (driveId) {
+    return `https://drive.google.com/file/d/${driveId}/preview`;
+  }
   
+  return null;
+}
+
+/** Extract Google Drive File ID from URL */
+function getGoogleDriveFileId(url) {
+  if (!url) return null;
+  const idMatch = url.match(/[?&]id=([^&]+)/);
+  if (idMatch) return idMatch[1];
+  const dMatch = url.match(/\/d\/([^/]+)/);
+  if (dMatch) return dMatch[1];
+  const srcMatch = url.match(/src="([^"]+)"/);
+  if (srcMatch) return getGoogleDriveFileId(srcMatch[1]);
+  return null;
+}
+
+/** Retrieve Video Cover Thumbnail from YouTube or Google Drive */
+function getKmVideoThumbnailUrl(url) {
+  if (!url) return null;
+  const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch) {
+    return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+  }
+  const driveId = getGoogleDriveFileId(url);
+  if (driveId) {
+    return `https://drive.google.com/thumbnail?sz=w600&id=${driveId}`;
+  }
   return null;
 }
 
