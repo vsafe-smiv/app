@@ -4683,6 +4683,7 @@ dialog::backdrop {
 .km-content-item-media {
   width: 100%;
   background: #f1f5f9;
+  display: block;
 }
 .km-content-item-media img {
   width: 100%;
@@ -4693,9 +4694,11 @@ dialog::backdrop {
 .km-content-item-media video, 
 .km-content-item-media iframe {
   width: 100%;
-  aspect-ratio: 16 / 9;
   display: block;
   border: 0;
+}
+.km-video-container {
+  overflow: hidden;
 }
 .km-content-item-body {
   padding: 1rem 1.25rem;
